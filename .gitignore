@@ -9,6 +9,8 @@ target/
 *.jar
 *.war
 *.log
+*.nar
+*.ear
 
 # ===== IDE =====
 .idea/
@@ -16,6 +18,7 @@ target/
 *.iml
 *.iws
 *.ipr
+*.ctxt
 
 # ===== OS =====
 .DS_Store
@@ -35,3 +38,8 @@ memory/
 *.tmp
 *.swp
 *.bak
+
+# ===== JVM =====
+hs_err_pid*
+replay_pid*
+.mtj.tmp/
