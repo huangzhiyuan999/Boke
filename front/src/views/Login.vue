@@ -17,7 +17,6 @@
         <p class="login-msg" v-if="msg" :class="msgType">{{ msg }}</p>
         <button type="submit" class="login-btn" :disabled="loading">登 录</button>
       </form>
-      <p class="login-hint">测试账号：admin / admin 或 user / user123</p>
     </div>
   </div>
 </template>
