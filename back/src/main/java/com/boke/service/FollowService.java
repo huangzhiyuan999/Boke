@@ -79,6 +79,7 @@ public class FollowService extends ServiceImpl<FollowMapper, Follow> {
                     vo.setAvatarColor(u.getAvatarColor());
                     vo.setBio(u.getBio());
                     vo.setFollowed(false);
+                    vo.setFans(baseMapper.countFollowers(u.getId()) + " 粉丝");
                     return vo;
                 }).collect(Collectors.toList());
     }

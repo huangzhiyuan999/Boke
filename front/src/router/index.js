@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 
+function getAuth() {
+  try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
+}
+
 const routes = [
   {
     path: '/',
@@ -60,6 +64,16 @@ const router = createRouter({
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
     return { top: 0 }
+  }
+})
+
+router.beforeEach((to, from, next) => {
+  const authRequired = ['Admin', 'Following'].includes(to.name)
+  const user = getAuth()
+  if (authRequired && !user) {
+    next('/login?msg=请先登录')
+  } else {
+    next()
   }
 })
 

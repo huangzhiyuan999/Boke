@@ -28,4 +28,7 @@ public interface FollowMapper extends BaseMapper<Follow> {
             "INNER JOIN follows f ON u.id = f.follower_id " +
             "WHERE f.followed_id = #{userId}")
     List<User> findFollowerUsers(@Param("userId") Long userId);
+
+    @Select("SELECT COUNT(*) FROM follows WHERE followed_id = #{userId}")
+    int countFollowers(@Param("userId") Long userId);
 }
