@@ -42,7 +42,7 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Initializing seed data...");
 
         // ===== 1. Users =====
-        User admin = createUser("admin", "admin@blog.com", "admin",
+        User admin = createUser("admin", "admin@blog.com", "qwe123",
                 "linear-gradient(135deg, #5B8C5A, #7EC8A8)", "博客管理员", "admin");
         User user = createUser("user", "user@blog.com", "user123",
                 "linear-gradient(135deg, #667eea, #764ba2)", "普通用户", "user");
