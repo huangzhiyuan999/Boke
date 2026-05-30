@@ -1,3 +1,5 @@
+import { logout } from '../stores/auth.js'
+
 const BASE = 'http://localhost:8080/api'
 
 function getToken() {
@@ -17,8 +19,7 @@ async function request(method, path, body = null) {
 
   if (data.code !== 200) {
     if (data.code === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      logout()
     }
     throw new Error(data.message || '请求失败')
   }

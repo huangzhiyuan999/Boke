@@ -69,17 +69,19 @@ async function load() {
   loading.value = true
   const id = Number(route.params.id)
   try {
-    const [postData, listData] = await Promise.all([
-      api.get(`/posts/${id}`),
-      api.get('/posts?type=post')
-    ])
-    post.value = postData
-    posts.value = listData || []
+    post.value = await api.get(`/posts/${id}`)
   } catch (e) {
     console.error('Failed to load post:', e)
     post.value = null
   } finally {
     loading.value = false
+  }
+
+  try {
+    const listData = await api.get('/posts?type=post')
+    posts.value = listData || []
+  } catch (e) {
+    console.error('Failed to load post list:', e)
   }
 }
 

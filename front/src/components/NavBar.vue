@@ -14,7 +14,7 @@
         </router-link>
       </div>
       <nav class="nav-links">
-        <router-link to="/" active-class="active" exact><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> 首页</router-link>
+        <router-link to="/" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> 首页</router-link>
         <router-link to="/articles" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> 文章</router-link>
         <router-link to="/recommend" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 推荐</router-link>
         <router-link to="/following" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg> 关注</router-link>
@@ -36,7 +36,7 @@
     </div>
     <transition name="slide">
       <nav v-if="menuOpen" class="mobile-nav" @click="menuOpen = false">
-        <router-link to="/" exact>首页</router-link>
+        <router-link to="/">首页</router-link>
         <router-link to="/articles">文章</router-link>
         <router-link to="/recommend">推荐</router-link>
         <router-link to="/following">关注</router-link>

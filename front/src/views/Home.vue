@@ -9,18 +9,18 @@
           最新公告
         </h2>
         <div class="announce-list">
-          <router-link
+          <div
             v-for="item in latestAnnouncements"
             :key="item.id"
-            :to="`/post/${item.id}`"
             class="announce-card"
+            @click="openAnnouncement(item)"
           >
             <div class="announce-badge">公告</div>
             <div class="announce-body">
               <h3 class="announce-title">{{ item.title }}</h3>
               <p class="announce-summary">{{ item.summary }}</p>
             </div>
-          </router-link>
+          </div>
         </div>
       </section>
 
@@ -53,11 +53,28 @@
         </div>
       </section>
     </div>
+
+    <!-- Announcement Modal -->
+    <teleport to="body">
+      <transition name="modal">
+        <div v-if="selectedAnnouncement" class="modal-overlay" @click.self="closeAnnouncement">
+          <div class="modal-dialog">
+            <button class="modal-close" @click="closeAnnouncement">&times;</button>
+            <div class="modal-cover" :style="{ background: selectedAnnouncement.cover }"></div>
+            <div class="modal-body">
+              <time class="modal-date">{{ selectedAnnouncement.createdAt || selectedAnnouncement.date }}</time>
+              <h2 class="modal-title">{{ selectedAnnouncement.title }}</h2>
+              <div class="modal-content" v-html="renderedAnnouncement"></div>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../utils/api.js'
 
@@ -66,6 +83,45 @@ const heroBg = '/hero-bg.jpg'
 const animated = ref(false)
 const announcements = ref([])
 const posts = ref([])
+const selectedAnnouncement = ref(null)
+
+function openAnnouncement(item) {
+  selectedAnnouncement.value = item
+  document.body.style.overflow = 'hidden'
+  document.addEventListener('keydown', handleEsc)
+}
+
+function closeAnnouncement() {
+  selectedAnnouncement.value = null
+  document.body.style.overflow = ''
+  document.removeEventListener('keydown', handleEsc)
+}
+
+function handleEsc(e) {
+  if (e.key === 'Escape') closeAnnouncement()
+}
+
+function renderMarkdown(text) {
+  if (!text) return ''
+  let html = text
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    return `<pre><code>${code.trim()}</code></pre>`
+  })
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\n\n/g, '</p><p>')
+  html = '<p>' + html + '</p>'
+  html = html.replace(/<p>\s*<\/p>/g, '')
+  html = html.replace(/<p>(<h[23]>)/g, '$1')
+  html = html.replace(/(<\/h[23]>)<\/p>/g, '$1')
+  return html
+}
+
+const renderedAnnouncement = computed(() =>
+  renderMarkdown(selectedAnnouncement.value?.content)
+)
 
 function triggerAnimation() {
   animated.value = false
@@ -261,5 +317,149 @@ watch([posts, announcements, () => route.params.tag], () => {
 @media (max-width: 480px) {
   .home { padding-top: 50px; }
   .post-item-cover { width: 60px; }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal-dialog {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  max-width: 640px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  font-size: 1.4rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.modal-close:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--color-text);
+}
+
+.modal-cover {
+  height: 80px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.modal-body {
+  padding: 24px 28px 32px;
+}
+
+.modal-date {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.modal-title {
+  font-size: 1.4rem;
+  margin: 0 0 20px;
+  line-height: 1.4;
+}
+
+.modal-content {
+  font-size: 1rem;
+  line-height: 1.9;
+  color: var(--color-text);
+}
+
+.modal-content :deep(h2) {
+  font-size: 1.2rem;
+  margin: 1.6em 0 0.5em;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-content :deep(h3) {
+  font-size: 1.05rem;
+  margin: 1.4em 0 0.4em;
+}
+
+.modal-content :deep(p) {
+  margin: 0.7em 0;
+}
+
+.modal-content :deep(pre) {
+  background: #f5f5f5;
+  padding: 14px 18px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.88rem;
+  margin: 1em 0;
+}
+
+.modal-content :deep(code) {
+  font-size: 0.9em;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.modal-content :deep(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.modal-content :deep(strong) {
+  font-weight: 600;
+}
+
+.announce-card {
+  cursor: pointer;
+}
+
+/* Modal transition */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.modal-enter-active .modal-dialog,
+.modal-leave-active .modal-dialog {
+  transition: transform 0.25s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-dialog {
+  transform: scale(0.92);
+}
+
+.modal-leave-to .modal-dialog {
+  transform: scale(0.92);
 }
 </style>
