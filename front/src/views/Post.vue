@@ -59,6 +59,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../utils/api.js'
+import { renderMarkdown } from '../utils/markdown.js'
 
 const route = useRoute()
 const post = ref(null)
@@ -87,24 +88,6 @@ async function load() {
 
 onMounted(load)
 watch(() => route.params.id, load)
-
-function renderMarkdown(text) {
-  if (!text) return ''
-  let html = text
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre><code>${code.trim()}</code></pre>`
-  })
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\n\n/g, '</p><p>')
-  html = '<p>' + html + '</p>'
-  html = html.replace(/<p>\s*<\/p>/g, '')
-  html = html.replace(/<p>(<h[23]>)/g, '$1')
-  html = html.replace(/(<\/h[23]>)<\/p>/g, '$1')
-  return html
-}
 
 const renderedContent = computed(() => renderMarkdown(post.value?.content))
 
@@ -173,14 +156,26 @@ const nextPost = computed(() => {
 
 .tag { background: var(--color-tag-bg); color: var(--color-tag-text); padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
 
-.post-content { font-size: 1rem; line-height: 1.9; }
+.post-content { font-size: 1rem; line-height: 1.9; word-break: break-word; }
 
+.post-content :deep(h1) { font-size: 1.6rem; margin: 2em 0 0.5em; padding-bottom: 8px; border-bottom: 2px solid var(--color-border); }
 .post-content :deep(h2) { font-size: 1.4rem; margin: 2em 0 0.6em; padding-bottom: 8px; border-bottom: 2px solid var(--color-border); }
 .post-content :deep(h3) { font-size: 1.15rem; margin: 1.6em 0 0.4em; }
+.post-content :deep(h4) { font-size: 1.05rem; margin: 1.4em 0 0.3em; }
 .post-content :deep(p) { margin: 0.8em 0; }
-.post-content :deep(pre) { margin: 1.2em 0; }
-.post-content :deep(code) { font-size: 0.9em; }
-.post-content :deep(strong) { font-weight: 600; color: var(--color-text); }
+.post-content :deep(pre) { background: #f5f5f5; padding: 14px 18px; border-radius: 8px; overflow-x: auto; font-size: 0.88rem; margin: 1.2em 0; line-height: 1.6; }
+.post-content :deep(code) { font-size: 0.9em; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; }
+.post-content :deep(pre code) { background: none; padding: 0; border-radius: 0; }
+.post-content :deep(strong) { font-weight: 600; }
+.post-content :deep(em) { font-style: italic; }
+.post-content :deep(del) { text-decoration: line-through; opacity: 0.7; }
+.post-content :deep(img) { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: 1em 0; display: block; }
+.post-content :deep(a) { color: var(--color-primary); text-decoration: underline; }
+.post-content :deep(a:hover) { color: var(--color-primary-dark); }
+.post-content :deep(blockquote) { margin: 1em 0; padding: 10px 20px; border-left: 4px solid var(--color-primary-light); background: var(--color-tag-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--color-text-secondary); }
+.post-content :deep(ul), .post-content :deep(ol) { margin: 0.8em 0; padding-left: 1.8em; }
+.post-content :deep(li) { margin: 0.3em 0; }
+.post-content :deep(hr) { border: none; border-top: 1px solid var(--color-border); margin: 2em 0; }
 
 .post-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 60px; padding-top: 32px; border-top: 1px solid var(--color-border); }
 

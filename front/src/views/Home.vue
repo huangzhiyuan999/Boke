@@ -77,6 +77,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../utils/api.js'
+import { renderMarkdown } from '../utils/markdown.js'
 
 const route = useRoute()
 const heroBg = '/hero-bg.jpg'
@@ -99,24 +100,6 @@ function closeAnnouncement() {
 
 function handleEsc(e) {
   if (e.key === 'Escape') closeAnnouncement()
-}
-
-function renderMarkdown(text) {
-  if (!text) return ''
-  let html = text
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre><code>${code.trim()}</code></pre>`
-  })
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\n\n/g, '</p><p>')
-  html = '<p>' + html + '</p>'
-  html = html.replace(/<p>\s*<\/p>/g, '')
-  html = html.replace(/<p>(<h[23]>)/g, '$1')
-  html = html.replace(/(<\/h[23]>)<\/p>/g, '$1')
-  return html
 }
 
 const renderedAnnouncement = computed(() =>
@@ -392,48 +375,27 @@ watch([posts, announcements, () => route.params.tag], () => {
   font-size: 1rem;
   line-height: 1.9;
   color: var(--color-text);
+  word-break: break-word;
 }
 
-.modal-content :deep(h2) {
-  font-size: 1.2rem;
-  margin: 1.6em 0 0.5em;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.modal-content :deep(h3) {
-  font-size: 1.05rem;
-  margin: 1.4em 0 0.4em;
-}
-
-.modal-content :deep(p) {
-  margin: 0.7em 0;
-}
-
-.modal-content :deep(pre) {
-  background: #f5f5f5;
-  padding: 14px 18px;
-  border-radius: 8px;
-  overflow-x: auto;
-  font-size: 0.88rem;
-  margin: 1em 0;
-}
-
-.modal-content :deep(code) {
-  font-size: 0.9em;
-  background: #f0f0f0;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.modal-content :deep(pre code) {
-  background: none;
-  padding: 0;
-}
-
-.modal-content :deep(strong) {
-  font-weight: 600;
-}
+.modal-content :deep(h1) { font-size: 1.5rem; margin: 1.8em 0 0.5em; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
+.modal-content :deep(h2) { font-size: 1.35rem; margin: 1.6em 0 0.5em; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
+.modal-content :deep(h3) { font-size: 1.15rem; margin: 1.4em 0 0.4em; }
+.modal-content :deep(h4) { font-size: 1.05rem; margin: 1.2em 0 0.3em; }
+.modal-content :deep(p) { margin: 0.7em 0; }
+.modal-content :deep(pre) { background: #f5f5f5; padding: 14px 18px; border-radius: 8px; overflow-x: auto; font-size: 0.88rem; margin: 1em 0; line-height: 1.6; }
+.modal-content :deep(code) { font-size: 0.9em; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; }
+.modal-content :deep(pre code) { background: none; padding: 0; border-radius: 0; }
+.modal-content :deep(strong) { font-weight: 600; }
+.modal-content :deep(em) { font-style: italic; }
+.modal-content :deep(del) { text-decoration: line-through; opacity: 0.7; }
+.modal-content :deep(img) { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: 1em 0; display: block; }
+.modal-content :deep(a) { color: var(--color-primary); text-decoration: underline; }
+.modal-content :deep(a:hover) { color: var(--color-primary-dark); }
+.modal-content :deep(blockquote) { margin: 1em 0; padding: 10px 20px; border-left: 4px solid var(--color-primary-light); background: var(--color-tag-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--color-text-secondary); }
+.modal-content :deep(ul), .modal-content :deep(ol) { margin: 0.8em 0; padding-left: 1.8em; }
+.modal-content :deep(li) { margin: 0.3em 0; }
+.modal-content :deep(hr) { border: none; border-top: 1px solid var(--color-border); margin: 2em 0; }
 
 .announce-card {
   cursor: pointer;
