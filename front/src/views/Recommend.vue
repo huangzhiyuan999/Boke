@@ -24,7 +24,9 @@
               <span class="feed-time">{{ item.time }}</span>
             </div>
             <span v-if="isMine(item)" class="feed-me-badge" title="我的动态">&#9786;</span>
-            <button v-else class="feed-follow">+ 关注</button>
+            <button v-else class="feed-follow" :class="{ followed: isFollowed(item) }" @click="toggleFollow(item)">
+              {{ isFollowed(item) ? '已关注' : '+ 关注' }}
+            </button>
           </div>
           <div class="feed-body">
             <p class="feed-text">{{ item.content }}</p>
@@ -42,7 +44,6 @@
           <div class="feed-actions">
             <span class="action-item" @click="toggleLike(item)">&#9825; {{ item.likes }}</span>
             <span class="action-item" @click="openComments(item)">&#9993; {{ item.commentCount || item.comments }}</span>
-            <span class="action-item">&#8630; {{ item.reposts }}</span>
           </div>
         </article>
       </div>
@@ -222,6 +223,28 @@ async function handleCreate() {
 
 const searchQuery = ref('')
 const feedItems = ref([])
+const followingSet = ref(new Set())
+
+function isFollowed(item) {
+  return followingSet.value.has(item.authorId || item.userId)
+}
+
+async function toggleFollow(item) {
+  if (!requireAuth(router)) return
+  const targetId = item.authorId || item.userId
+  try {
+    if (isFollowed(item)) {
+      await api.delete(`/follows/${targetId}`)
+      followingSet.value.delete(targetId)
+    } else {
+      await api.post('/follows', { followedId: targetId })
+      followingSet.value.add(targetId)
+    }
+    followingSet.value = new Set(followingSet.value)
+  } catch (e) {
+    alert(e.message || '操作失败')
+  }
+}
 
 async function loadFeeds() {
   try {
@@ -232,7 +255,15 @@ async function loadFeeds() {
   }
 }
 
-onMounted(loadFeeds)
+async function loadFollowing() {
+  try {
+    const data = await api.get('/follows/following')
+    if (data) data.forEach(f => followingSet.value.add(f.id))
+    followingSet.value = new Set(followingSet.value)
+  } catch (e) { /* ignore if not logged in */ }
+}
+
+onMounted(() => { loadFeeds(); loadFollowing() })
 
 async function toggleLike(item) {
   if (!requireAuth(router)) return
@@ -364,8 +395,10 @@ const filteredItems = computed(() => {
 .feed-user { flex: 1; display: flex; flex-direction: column; gap: 1px; }
 .feed-name { font-weight: 600; font-size: 0.95rem; }
 .feed-time { font-size: 0.78rem; color: var(--color-text-muted); }
-.feed-follow { padding: 4px 14px; border: 1px solid var(--color-primary); background: none; color: var(--color-primary); border-radius: 16px; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: background 0.2s, color 0.2s; flex-shrink: 0; }
+.feed-follow { padding: 4px 14px; border: 1px solid var(--color-primary); background: none; color: var(--color-primary); border-radius: 16px; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: background 0.2s, color 0.2s; flex-shrink: 0; font-family: inherit; }
 .feed-follow:hover { background: var(--color-primary); color: #fff; }
+.feed-follow.followed { background: var(--color-primary); color: #fff; }
+.feed-follow.followed:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); }
 .feed-me-badge { width: 28px; height: 28px; border-radius: 50%; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
 .feed-body { margin-bottom: 12px; }
 .feed-text { font-size: 0.95rem; line-height: 1.75; margin: 0 0 10px; color: var(--color-text); }
