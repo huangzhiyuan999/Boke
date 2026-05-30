@@ -33,6 +33,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/visits").permitAll()
                 .requestMatchers("/api/admin/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/messages").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/upload").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/feeds/**", "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/follows/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/**").authenticated()

@@ -30,7 +30,7 @@
             <p class="feed-text">{{ item.content }}</p>
             <div class="feed-images" v-if="item.images && item.images.length">
               <template v-for="(img, i) in item.images" :key="i">
-                <img v-if="isImageUrl(img)" :src="img" class="feed-img" alt="" />
+                <img v-if="isImageUrl(img)" :src="getImageUrl(img)" class="feed-img" alt="" />
                 <div v-else class="feed-img" :style="{ background: img }"></div>
               </template>
             </div>
@@ -181,13 +181,18 @@ function removeImage(index) {
   imageFiles.value.splice(index, 1)
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+async function uploadImages(files) {
+  const formData = new FormData()
+  files.forEach(f => formData.append('files', f))
+  const token = localStorage.getItem('token')
+  const res = await fetch('http://localhost:8080/api/upload', {
+    method: 'POST',
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    body: formData
   })
+  const data = await res.json()
+  if (data.code !== 200) throw new Error(data.message || '上传失败')
+  return data.data.map(item => item.url)
 }
 
 async function handleCreate() {
@@ -195,7 +200,7 @@ async function handleCreate() {
   try {
     let images = form.value.images
     if (imageFiles.value.length > 0) {
-      images = await Promise.all(imageFiles.value.map(f => fileToBase64(f)))
+      images = await uploadImages(imageFiles.value)
     }
     await api.post('/feeds', {
       content: form.value.content,
@@ -305,6 +310,12 @@ async function postComment() {
   } finally {
     sendingComment.value = false
   }
+}
+
+function getImageUrl(img) {
+  if (!img) return ''
+  if (img.startsWith('http') || img.startsWith('data:')) return img
+  return 'http://localhost:8080' + img
 }
 
 function isImageUrl(url) {
