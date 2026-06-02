@@ -20,6 +20,7 @@
         <router-link to="/following" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg> 关注</router-link>
         <router-link to="/about" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg> 关于我</router-link>
         <router-link to="/messages" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 留言板</router-link>
+        <router-link to="/entertainment" active-class="active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 12h4"/><path d="M8 10v4"/><path d="M15 11h.01"/><path d="M18 13h.01"/><rect x="2" y="6" width="20" height="12" rx="2"/></svg> 娱乐</router-link>
         <router-link v-if="!isLoggedIn" to="/login" class="nav-btn-login">登录</router-link>
         <div v-else class="nav-user" @click.stop="showDropdown = !showDropdown">
           <span class="user-avatar">{{ avatarLetter }}</span>
@@ -42,6 +43,7 @@
         <router-link to="/following">关注</router-link>
         <router-link to="/about">关于我</router-link>
         <router-link to="/messages">留言板</router-link>
+        <router-link to="/entertainment">娱乐</router-link>
         <router-link v-if="!isLoggedIn" to="/login">登录</router-link>
         <a v-else href="#" @click.prevent="handleLogout">退出登录 ({{ displayName }})</a>
       </nav>
@@ -136,7 +138,7 @@ onUnmounted(() => {
 .logo { display: flex; align-items: center; color: var(--color-text); font-size: 1.15rem; font-weight: 700; margin-left: 48px; }
 .logo:hover { color: var(--color-primary); }
 
-.nav-links { display: flex; gap: 24px; align-items: center; margin-left: auto; }
+.nav-links { display: flex; gap: clamp(12px, 1.6vw, 24px); align-items: center; margin-left: auto; }
 
 .nav-links a {
   display: flex; align-items: center; gap: 4px; color: var(--color-text-secondary);
@@ -202,7 +204,7 @@ onUnmounted(() => {
 .slide-enter-active, .slide-leave-active { transition: opacity 0.2s, transform 0.2s; }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-8px); }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .navbar-inner { padding-left: 64px; }
   .nav-links { display: none; }
   .menu-btn { display: flex; }

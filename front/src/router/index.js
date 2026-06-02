@@ -42,6 +42,11 @@ const routes = [
     component: () => import('../views/MessageBoard.vue')
   },
   {
+    path: '/entertainment/:section?',
+    name: 'Entertainment',
+    component: () => import('../views/Entertainment.vue')
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('../views/Login.vue')
