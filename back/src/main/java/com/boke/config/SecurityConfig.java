@@ -27,7 +27,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET,
                     "/api/posts/**", "/api/tags/**", "/api/config/**",
-                    "/api/feeds/**", "/api/messages/**", "/api/comments/**"
+                    "/api/feeds/**", "/api/messages/**", "/api/comments/**",
+                    "/api/entertainment/**"
                 ).permitAll()
                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers("/api/visits").permitAll()
@@ -36,6 +37,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/upload").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/feeds/**", "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/follows/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/entertainment/check-in", "/api/entertainment/events/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/entertainment/games/**").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/**").authenticated()
                 .anyRequest().permitAll()

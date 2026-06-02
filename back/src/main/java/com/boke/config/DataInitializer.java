@@ -30,11 +30,20 @@ public class DataInitializer implements CommandLineRunner {
     private final FeedLikeMapper feedLikeMapper;
     private final FeedCommentMapper feedCommentMapper;
     private final FollowMapper followMapper;
+    private final EntertainmentItemMapper entertainmentItemMapper;
+    private final EntertainmentGameMapper entertainmentGameMapper;
+    private final EntertainmentGameRankMapper entertainmentGameRankMapper;
+    private final EntertainmentEventMapper entertainmentEventMapper;
+    private final EntertainmentWalletMapper entertainmentWalletMapper;
 
     @Override
     @Transactional
     public void run(String... args) {
         if (userMapper.findByUsername("admin") != null) {
+            if (entertainmentItemMapper.selectCount(null) == 0) {
+                log.info("Initializing entertainment seed data...");
+                seedEntertainment(userMapper.selectList(null));
+            }
             log.info("Data already initialized, skipping");
             return;
         }
@@ -266,6 +275,9 @@ public class DataInitializer implements CommandLineRunner {
             follow(eu.getId(), admin.getId());
         }
 
+        // ===== 10. Entertainment module =====
+        seedEntertainment(allUsers);
+
         log.info("Seed data initialized: {} users, {} posts, {} feeds, {} messages",
                 userMapper.selectCount(null), postMapper.selectCount(null),
                 feedItemMapper.selectCount(null), messageMapper.selectCount(null));
@@ -292,5 +304,105 @@ public class DataInitializer implements CommandLineRunner {
         f.setFollowedId(followedId);
         f.setCreatedAt(LocalDateTime.now());
         followMapper.insert(f);
+    }
+
+    private void seedEntertainment(List<User> users) {
+        Object[][] items = {
+            {"薄荷头像框", "头像装扮", "清爽绿色头像装饰，展示 7 天。", 320, "NEW", 86, 1240, "/photo/entertainment/product-frame.jpg", 1},
+            {"星光徽章", "头像装扮", "个人主页装饰徽章，展示 30 天。", 680, "HOT", 42, 2680, "/photo/entertainment/product-badge.jpg", 2},
+            {"留言高亮卡", "互动道具", "让你的留言在留言板置顶高亮。", 520, "TOP", 58, 1810, "/photo/entertainment/product-highlight.jpg", 3},
+            {"游戏复活券", "游戏道具", "小游戏失败后可模拟复活一次。", 180, "FUN", 230, 3021, "/photo/entertainment/product-revive.jpg", 4},
+            {"幸运抽奖券", "互动道具", "参与活动页抽奖一次。", 260, "LUCK", 145, 2168, "/photo/entertainment/product-lottery.jpg", 5},
+            {"夜间主题卡", "主题权益", "兑换后可解锁深色主题。", 880, "VIP", 30, 960, "/photo/entertainment/product-theme.jpg", 6},
+            {"评论贴纸包", "互动道具", "留言和推荐模块可用的趣味贴纸。", 420, "SET", 76, 1355, "/photo/entertainment/product-sticker.jpg", 7},
+            {"挑战加速卡", "游戏道具", "完成小游戏任务时获得额外奖励。", 360, "PLUS", 118, 1542, "/photo/entertainment/product-boost.jpg", 8},
+        };
+        for (Object[] row : items) {
+            EntertainmentItem item = new EntertainmentItem();
+            item.setName((String) row[0]);
+            item.setCategory((String) row[1]);
+            item.setDescription((String) row[2]);
+            item.setPrice((Integer) row[3]);
+            item.setBadge((String) row[4]);
+            item.setStock((Integer) row[5]);
+            item.setWishCount((Integer) row[6]);
+            item.setImageUrl((String) row[7]);
+            item.setSortOrder((Integer) row[8]);
+            item.setStatus("active");
+            entertainmentItemMapper.insert(item);
+        }
+
+        Object[][] games = {
+            {"speed", "反应力挑战", "GO", "街机反应", "在倒计时结束瞬间点击，越接近 0 分数越高。", "反应,单人,排行榜", "96%", 1280, "/photo/entertainment/game-speed.jpg",
+             "linear-gradient(135deg, rgba(15,23,42,0.88), rgba(6,95,70,0.78)), url('/photo/entertainment/game-speed.jpg') center / cover no-repeat", "倒计时就绪", "模拟区域会记录点击时机，后续接入真实小游戏逻辑。", 1},
+            {"memory", "记忆翻牌", "MEM", "休闲益智", "翻开卡片寻找相同图案，模拟排行数据。", "记忆,休闲,轻量", "93%", 860, "/photo/entertainment/game-memory.jpg",
+             "linear-gradient(135deg, rgba(15,23,42,0.88), rgba(88,28,135,0.78)), url('/photo/entertainment/game-memory.jpg') center / cover no-repeat", "翻牌局已创建", "这里预留卡牌矩阵和计步统计，当前为前端模拟。", 2},
+            {"typing", "打字冲刺", "ABC", "键盘练习", "限时输入随机词组，统计速度和准确率。", "键盘,练习,速度", "91%", 640, "/photo/entertainment/game-typing.jpg",
+             "linear-gradient(135deg, rgba(15,23,42,0.88), rgba(194,65,12,0.78)), url('/photo/entertainment/game-typing.jpg') center / cover no-repeat", "词组池准备完成", "模拟输入区会展示速度和准确率，后续可接真实计时。", 3},
+        };
+        for (Object[] row : games) {
+            EntertainmentGame game = new EntertainmentGame();
+            game.setCode((String) row[0]);
+            game.setName((String) row[1]);
+            game.setShortName((String) row[2]);
+            game.setGenre((String) row[3]);
+            game.setDescription((String) row[4]);
+            game.setTags((String) row[5]);
+            game.setRating((String) row[6]);
+            game.setPlayers((Integer) row[7]);
+            game.setImageUrl((String) row[8]);
+            game.setDetailBackground((String) row[9]);
+            game.setDemoTitle((String) row[10]);
+            game.setDemoText((String) row[11]);
+            game.setSortOrder((Integer) row[12]);
+            game.setStatus("active");
+            entertainmentGameMapper.insert(game);
+            seedGameRanks(game);
+        }
+
+        Object[][] events = {
+            {"每日签到", "✓", "登录娱乐广场即可领取奖励。", 80, 0, 1},
+            {"幸运抽奖", "🎲", "消耗抽奖券参与转盘。", 120, 0, 2},
+            {"小游戏挑战", "⌁", "完成任意一局游戏即可领取。", 160, 0, 3},
+            {"商城逛逛", "✦", "查看任意商品详情完成任务。", 60, 0, 4},
+        };
+        for (Object[] row : events) {
+            EntertainmentEvent event = new EntertainmentEvent();
+            event.setTitle((String) row[0]);
+            event.setIcon((String) row[1]);
+            event.setDescription((String) row[2]);
+            event.setReward((Integer) row[3]);
+            event.setDefaultDone((Integer) row[4]);
+            event.setSortOrder((Integer) row[5]);
+            event.setStatus("active");
+            entertainmentEventMapper.insert(event);
+        }
+
+        for (int i = 0; i < users.size(); i++) {
+            EntertainmentWallet wallet = new EntertainmentWallet();
+            wallet.setUserId(users.get(i).getId());
+            wallet.setCoins(1800 + i * 260);
+            if (i % 2 == 0) wallet.setCheckedInDate(java.time.LocalDate.now());
+            entertainmentWalletMapper.insert(wallet);
+        }
+    }
+
+    private void seedGameRanks(EntertainmentGame game) {
+        String[][] rankNames = {
+            {"星野", "9820"}, {"小墨", "9340"}, {"阿川", "9020"}
+        };
+        if ("memory".equals(game.getCode())) {
+            rankNames = new String[][]{{"南枝", "28"}, {"青禾", "31"}, {"云里", "36"}};
+        } else if ("typing".equals(game.getCode())) {
+            rankNames = new String[][]{{"北辰", "136"}, {"林夏", "124"}, {"知更", "119"}};
+        }
+        for (int i = 0; i < rankNames.length; i++) {
+            EntertainmentGameRank rank = new EntertainmentGameRank();
+            rank.setGameId(game.getId());
+            rank.setPlayerName(rankNames[i][0]);
+            rank.setScore(Integer.parseInt(rankNames[i][1]));
+            rank.setSortOrder(i + 1);
+            entertainmentGameRankMapper.insert(rank);
+        }
     }
 }
