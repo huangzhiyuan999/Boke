@@ -119,3 +119,97 @@ CREATE TABLE IF NOT EXISTS site_visits (
     visited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS entertainment_items (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    description VARCHAR(500),
+    price INT UNSIGNED NOT NULL DEFAULT 0,
+    badge VARCHAR(20),
+    stock INT UNSIGNED NOT NULL DEFAULT 0,
+    wish_count INT UNSIGNED NOT NULL DEFAULT 0,
+    image_url VARCHAR(500),
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    status ENUM('active', 'offline') DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_entertainment_items_category (category),
+    INDEX idx_entertainment_items_status_sort (status, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS entertainment_games (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    short_name VARCHAR(20),
+    genre VARCHAR(50),
+    description VARCHAR(500),
+    tags VARCHAR(255),
+    rating VARCHAR(20),
+    players INT UNSIGNED NOT NULL DEFAULT 0,
+    image_url VARCHAR(500),
+    detail_background VARCHAR(700),
+    demo_title VARCHAR(100),
+    demo_text VARCHAR(500),
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    status ENUM('active', 'offline') DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_entertainment_games_status_sort (status, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS entertainment_game_ranks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    game_id INT UNSIGNED NOT NULL,
+    player_name VARCHAR(50) NOT NULL,
+    score INT UNSIGNED NOT NULL DEFAULT 0,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (game_id) REFERENCES entertainment_games(id) ON DELETE CASCADE,
+    INDEX idx_entertainment_game_ranks_game_score (game_id, score)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS entertainment_events (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    icon VARCHAR(20),
+    description VARCHAR(500),
+    reward INT UNSIGNED NOT NULL DEFAULT 0,
+    default_done TINYINT(1) DEFAULT 0,
+    sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+    status ENUM('active', 'offline') DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_entertainment_events_status_sort (status, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS entertainment_wallets (
+    user_id INT UNSIGNED PRIMARY KEY,
+    coins INT UNSIGNED NOT NULL DEFAULT 0,
+    checked_in_date DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS entertainment_event_records (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    event_id INT UNSIGNED NOT NULL,
+    completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_entertainment_event_user (user_id, event_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (event_id) REFERENCES entertainment_events(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS entertainment_game_plays (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED,
+    game_id INT UNSIGNED NOT NULL,
+    score INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (game_id) REFERENCES entertainment_games(id) ON DELETE CASCADE,
+    INDEX idx_entertainment_game_plays_game_score (game_id, score)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
