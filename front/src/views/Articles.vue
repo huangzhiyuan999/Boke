@@ -73,6 +73,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../utils/api.js'
+import { renderMarkdown } from '../utils/markdown.js'
 
 const activeId = ref(null)
 const selectedPost = ref(null)
@@ -105,24 +106,6 @@ async function selectPost(p) {
   } catch (e) {
     selectedPost.value = p
   }
-}
-
-function renderMarkdown(text) {
-  if (!text) return ''
-  let html = text
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre><code>${code.trim()}</code></pre>`
-  })
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\n\n/g, '</p><p>')
-  html = '<p>' + html + '</p>'
-  html = html.replace(/<p>\s*<\/p>/g, '')
-  html = html.replace(/<p>(<h[23]>)/g, '$1')
-  html = html.replace(/(<\/h[23]>)<\/p>/g, '$1')
-  return html
 }
 
 const renderedContent = computed(() => renderMarkdown(selectedPost.value?.content))
@@ -277,11 +260,21 @@ const renderedContent = computed(() => renderMarkdown(selectedPost.value?.conten
 
 .post-content :deep(h2) { font-size: 1.4rem; margin: 2em 0 0.6em; padding-bottom: 8px; border-bottom: 2px solid var(--color-border); }
 .post-content :deep(h3) { font-size: 1.15rem; margin: 1.6em 0 0.4em; }
+.post-content :deep(h1) { font-size: 1.6rem; margin: 2em 0 0.5em; padding-bottom: 8px; border-bottom: 2px solid var(--color-border); }
+.post-content :deep(h4) { font-size: 1.05rem; margin: 1.4em 0 0.3em; }
 .post-content :deep(p) { margin: 0.8em 0; }
 .post-content :deep(pre) { margin: 1.2em 0; background: #1E293B; color: #E2E8F0; padding: 20px 24px; border-radius: var(--radius-md); overflow-x: auto; font-family: var(--font-mono); font-size: 0.875rem; line-height: 1.6; }
 .post-content :deep(code) { font-family: var(--font-mono); font-size: 0.9em; }
 .post-content :deep(:not(pre) > code) { background: var(--color-tag-bg); color: var(--color-primary-dark); padding: 2px 8px; border-radius: 4px; }
 .post-content :deep(strong) { font-weight: 600; }
+.post-content :deep(em) { font-style: italic; }
+.post-content :deep(del) { text-decoration: line-through; opacity: 0.7; }
+.post-content :deep(img) { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: 1em 0; display: block; }
+.post-content :deep(a) { color: var(--color-primary); text-decoration: underline; }
+.post-content :deep(blockquote) { margin: 1em 0; padding: 10px 20px; border-left: 4px solid var(--color-primary-light); background: var(--color-tag-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--color-text-secondary); }
+.post-content :deep(ul), .post-content :deep(ol) { margin: 0.8em 0; padding-left: 1.8em; }
+.post-content :deep(li) { margin: 0.3em 0; }
+.post-content :deep(hr) { border: none; border-top: 1px solid var(--color-border); margin: 2em 0; }
 
 .post-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: calc(100vh - 60px); color: var(--color-text-muted); }
 .empty-icon { font-size: 4rem; margin-bottom: 16px; opacity: 0.4; }
@@ -295,8 +288,32 @@ const renderedContent = computed(() => renderMarkdown(selectedPost.value?.conten
 }
 
 @media (max-width: 640px) {
-  .articles-sidebar { width: 160px; }
+  .articles-layout { flex-direction: column; }
+  .articles-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 260px;
+    position: relative;
+    top: 0;
+    border-right: none;
+    border-bottom: 2px solid var(--color-primary-light);
+  }
+  .articles-sidebar.collapsed { width: 100%; max-height: 48px; overflow: hidden; }
+  .sidebar-top { padding: 10px 12px; }
+  .sidebar-title-row { align-items: flex-start; }
+  .sidebar-heading { flex-shrink: 0; }
+  .sidebar-search { width: min(120px, 38vw); }
+  .sidebar-search:focus { width: min(150px, 46vw); }
+  .sidebar-list { max-height: 190px; overflow-y: auto; }
+  .sidebar-list-collapsed { flex-direction: row; justify-content: center; padding: 8px 12px; overflow-x: auto; }
   .post-detail { padding: 20px 16px 40px; }
   .post-title { font-size: 1.4rem; }
+  .post-cover { height: 130px; }
+  .post-empty {
+    height: auto;
+    min-height: 300px;
+    padding: 48px 16px;
+    text-align: center;
+  }
 }
 </style>

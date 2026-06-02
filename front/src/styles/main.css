@@ -86,7 +86,7 @@ p { margin: 0.6em 0; }
 
 @media (max-width: 640px) {
   .container {
-    padding: 0 16px 0 64px;
+    padding: 0 16px;
   }
 }
 

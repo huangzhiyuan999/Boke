@@ -203,8 +203,23 @@ const nextPost = computed(() => {
 }
 
 @media (max-width: 640px) {
-  .post-sidebar { width: 160px; }
+  .post-page { flex-direction: column; }
+  .post-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 260px;
+    position: relative;
+    top: 0;
+    border-right: none;
+    border-bottom: 2px solid var(--color-primary-light);
+  }
+  .sidebar-header { padding: 12px 16px 8px; }
+  .sidebar-list { max-height: 210px; overflow-y: auto; }
+  .sidebar-item { padding: 10px 16px; }
   .post-detail { padding: 20px 16px 40px; }
+  .post-title { font-size: 1.4rem; }
+  .post-cover { height: 130px; }
   .post-nav { grid-template-columns: 1fr; }
+  .post-nav-link.next { margin-left: 0; text-align: left; }
 }
 </style>

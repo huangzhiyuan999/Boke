@@ -412,9 +412,55 @@ const filteredItems = computed(() => {
 .action-item:hover { color: var(--color-primary); }
 
 @media (max-width: 480px) {
+  .page-bg { overflow-x: hidden; }
+  .recommend-page { padding-top: 24px; }
+  .recommend-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .header-right {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .recommend-search {
+    width: 100%;
+  }
+  .create-btn {
+    align-self: stretch;
+    padding: 8px 16px;
+  }
   .feed-card { padding: 14px 16px; }
+  .feed-card,
+  .feed-body,
+  .feed-user { min-width: 0; }
+  .feed-follow {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    overflow: hidden;
+    text-indent: -999px;
+    position: relative;
+  }
+  .feed-follow::after {
+    content: '+';
+    position: absolute;
+    inset: 0;
+    text-indent: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .feed-follow.followed::after { content: '✓'; }
+  .feed-text { word-break: break-word; overflow-wrap: anywhere; }
   .feed-images { gap: 4px; }
+  .feed-img { width: 76px; height: 60px; }
   .feed-actions { gap: 20px; }
+  .modal-overlay { padding: 12px; align-items: flex-start; overflow-y: auto; }
+  .modal-card { padding: 22px 18px; max-height: none; }
+  .comment-panel { max-height: 78vh; }
 }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }

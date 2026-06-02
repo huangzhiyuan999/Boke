@@ -299,7 +299,18 @@ watch([posts, announcements, () => route.params.tag], () => {
 
 @media (max-width: 480px) {
   .home { padding-top: 50px; }
+  .home-content { padding: 0 16px 32px; }
+  .slide-in-left,
+  .slide-in-right {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .section-title { font-size: 0.95rem; }
+  .announce-body,
+  .post-item-body { padding: 10px 12px; }
   .post-item-cover { width: 60px; }
+  .post-item-meta { flex-wrap: wrap; gap: 4px 8px; }
 }
 
 /* Modal */
