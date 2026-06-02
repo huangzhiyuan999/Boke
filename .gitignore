@@ -34,6 +34,13 @@ desktop.ini
 .claude/
 memory/
 
+# ===== Uploads =====
+back/uploads/
+
+# ===== Deploy =====
+deploy/
+*.tar.gz
+
 # ===== Temp =====
 *.tmp
 *.swp
