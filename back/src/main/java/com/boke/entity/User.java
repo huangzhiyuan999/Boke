@@ -18,6 +18,7 @@ public class User {
     private String bio;
     private String role;
     private String status;
+    private Integer balance;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

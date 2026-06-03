@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/upload").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/feeds/**", "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/follows/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/entertainment/check-in", "/api/entertainment/events/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/entertainment/check-in", "/api/entertainment/events/**", "/api/entertainment/items/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/entertainment/games/**").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/**").authenticated()

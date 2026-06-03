@@ -10,4 +10,7 @@ import org.apache.ibatis.annotations.Update;
 public interface EntertainmentWalletMapper extends BaseMapper<EntertainmentWallet> {
     @Update("UPDATE entertainment_wallets SET coins = coins + #{coins}, updated_at = NOW() WHERE user_id = #{userId}")
     int addCoins(@Param("userId") Long userId, @Param("coins") Integer coins);
+
+    @Update("UPDATE entertainment_wallets SET coins = coins - #{coins}, updated_at = NOW() WHERE user_id = #{userId} AND coins >= #{coins}")
+    int deductCoins(@Param("userId") Long userId, @Param("coins") Integer coins);
 }

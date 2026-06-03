@@ -70,6 +70,13 @@ public class EntertainmentController {
         return Result.success(entertainmentService.playGame(currentUserId(auth), code, score));
     }
 
+    @PostMapping("/items/{id}/buy")
+    public Result<EntertainmentWalletVO> buyItem(@PathVariable Long id, Authentication auth) {
+        Long userId = currentUserId(auth);
+        if (userId == null) return Result.error(401, "未登录");
+        return Result.success(entertainmentService.buyItem(userId, id));
+    }
+
     private Long currentUserId(Authentication auth) {
         return auth != null ? (Long) auth.getPrincipal() : null;
     }

@@ -9,6 +9,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
+import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,10 +37,12 @@ public class DataInitializer implements CommandLineRunner {
     private final EntertainmentGameRankMapper entertainmentGameRankMapper;
     private final EntertainmentEventMapper entertainmentEventMapper;
     private final EntertainmentWalletMapper entertainmentWalletMapper;
+    private final DataSource dataSource;
 
     @Override
     @Transactional
     public void run(String... args) {
+        migrateSchema();
         if (userMapper.findByUsername("admin") != null) {
             if (entertainmentItemMapper.selectCount(null) == 0) {
                 log.info("Initializing entertainment seed data...");
@@ -283,6 +287,19 @@ public class DataInitializer implements CommandLineRunner {
                 feedItemMapper.selectCount(null), messageMapper.selectCount(null));
     }
 
+    private void migrateSchema() {
+        try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE users ADD COLUMN balance INT UNSIGNED NOT NULL DEFAULT 0 AFTER status");
+        } catch (Exception e) {
+            // column already exists
+        }
+        try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
+            stmt.execute("UPDATE users u INNER JOIN entertainment_wallets w ON u.id = w.user_id SET u.balance = w.coins WHERE u.balance = 0");
+        } catch (Exception e) {
+            log.info("Balance sync skipped: {}", e.getMessage());
+        }
+    }
+
     private User createUser(String name, String email, String pwd, String color, String bio, String role) {
         User u = new User();
         u.setUsername(name);
@@ -292,6 +309,7 @@ public class DataInitializer implements CommandLineRunner {
         u.setBio(bio);
         u.setRole(role);
         u.setStatus("active");
+        u.setBalance(0);
         u.setCreatedAt(LocalDateTime.now());
         u.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(u);
@@ -384,6 +402,10 @@ public class DataInitializer implements CommandLineRunner {
             wallet.setCoins(1800 + i * 260);
             if (i % 2 == 0) wallet.setCheckedInDate(java.time.LocalDate.now());
             entertainmentWalletMapper.insert(wallet);
+
+            User u = users.get(i);
+            u.setBalance(wallet.getCoins());
+            userMapper.updateById(u);
         }
     }
 

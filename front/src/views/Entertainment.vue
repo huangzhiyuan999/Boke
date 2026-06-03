@@ -296,7 +296,7 @@
         </div>
         <div class="detail-actions">
           <span>{{ selectedItem.price }} 娱乐币</span>
-          <button type="button" @click="selectedItem = null">模拟兑换</button>
+          <button type="button" :disabled="buying" @click="handleBuy">{{ buying ? '兑换中...' : '立即兑换' }}</button>
         </div>
       </div>
     </div>
@@ -319,6 +319,7 @@ const checkedIn = ref(false)
 const activeGameId = ref('')
 const toastMessage = ref('')
 const toastType = ref('toast-info')
+const buying = ref(false)
 let toastTimer = null
 const imageBase = '/photo/entertainment/'
 const shopItems = ref([])
@@ -414,6 +415,24 @@ function showToast(msg, type = 'toast-info') {
   toastType.value = type
   clearTimeout(toastTimer)
   toastTimer = setTimeout(() => { toastMessage.value = '' }, 3000)
+}
+
+function handleBuy() {
+  if (!isLoggedIn.value) {
+    showToast('请先登录后再兑换', 'toast-warn')
+    return
+  }
+  if (!selectedItem.value) return
+  buying.value = true
+  api.post(`/entertainment/items/${selectedItem.value.id}/buy`, {})
+    .then((wallet) => {
+      selectedItem.value.stock -= 1
+      selectedItem.value.sales += 1
+      applyWallet(wallet)
+      showToast('兑换成功！', 'toast-info')
+    })
+    .catch((e) => showToast(e.message || '兑换失败', 'toast-error'))
+    .finally(() => { buying.value = false })
 }
 
 function applyWallet(wallet) {

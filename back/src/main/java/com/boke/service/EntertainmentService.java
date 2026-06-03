@@ -24,6 +24,7 @@ public class EntertainmentService {
     private final EntertainmentWalletMapper walletMapper;
     private final EntertainmentEventRecordMapper eventRecordMapper;
     private final EntertainmentGamePlayMapper gamePlayMapper;
+    private final UserMapper userMapper;
 
     public EntertainmentHomeVO getHome(Long userId) {
         List<EntertainmentItemVO> items = itemMapper.findActiveItems().stream()
@@ -74,6 +75,7 @@ public class EntertainmentService {
             wallet.setCoins(wallet.getCoins() + 80);
             wallet.setCheckedInDate(today);
             walletMapper.updateById(wallet);
+            userMapper.addBalance(userId, 80);
         }
         return getWallet(userId);
     }
@@ -90,6 +92,7 @@ public class EntertainmentService {
             record.setCompletedAt(LocalDateTime.now());
             eventRecordMapper.insert(record);
             walletMapper.addCoins(userId, event.getReward());
+            userMapper.addBalance(userId, event.getReward());
         }
         return getWallet(userId);
     }
@@ -107,6 +110,20 @@ public class EntertainmentService {
         return getWallet(userId);
     }
 
+    @Transactional
+    public EntertainmentWalletVO buyItem(Long userId, Long itemId) {
+        EntertainmentItem item = itemMapper.selectById(itemId);
+        if (item == null || !"active".equals(item.getStatus())) throw new BusinessException(404, "商品不存在");
+        if (item.getStock() <= 0) throw new BusinessException(400, "商品库存不足");
+        EntertainmentWallet wallet = ensureWallet(userId);
+        if (wallet.getCoins() < item.getPrice()) throw new BusinessException(400, "娱乐币余额不足");
+        int deducted = walletMapper.deductCoins(userId, item.getPrice());
+        if (deducted == 0) throw new BusinessException(400, "娱乐币余额不足");
+        userMapper.deductBalance(userId, item.getPrice());
+        itemMapper.deductStock(itemId);
+        return getWallet(userId);
+    }
+
     private EntertainmentWallet ensureWallet(Long userId) {
         EntertainmentWallet wallet = walletMapper.selectById(userId);
         if (wallet == null) {
@@ -114,6 +131,7 @@ public class EntertainmentService {
             wallet.setUserId(userId);
             wallet.setCoins(2680);
             walletMapper.insert(wallet);
+            userMapper.addBalance(userId, 2680);
         }
         return wallet;
     }
