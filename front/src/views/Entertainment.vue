@@ -15,6 +15,11 @@
           <strong>{{ userCoins }}</strong>
           <button type="button" :disabled="checkedIn" @click="handleCheckIn">{{ checkedIn ? '已签' : '签到' }}</button>
         </div>
+        <transition name="toast-fade">
+          <div v-if="toastMessage" class="toast-bar" :class="toastType" @click="toastMessage = ''">
+            {{ toastMessage }}
+          </div>
+        </transition>
       </header>
 
       <nav class="channel-tabs" aria-label="娱乐频道">
@@ -312,6 +317,9 @@ const activeCategory = ref('全部')
 const activeSort = ref('default')
 const checkedIn = ref(false)
 const activeGameId = ref('')
+const toastMessage = ref('')
+const toastType = ref('toast-info')
+let toastTimer = null
 const imageBase = '/photo/entertainment/'
 const shopItems = ref([])
 const games = ref([])
@@ -373,25 +381,39 @@ const filteredShopItems = computed(() => {
 
 function handleCheckIn() {
   if (checkedIn.value) return
-  if (!isLoggedIn.value) return
+  if (!isLoggedIn.value) {
+    showToast('请先登录后再签到', 'toast-warn')
+    return
+  }
   api.post('/entertainment/check-in', {})
     .then(applyWallet)
-    .catch(() => {})
+    .catch((e) => showToast(e.message || '签到失败', 'toast-error'))
 }
 
 function startGame(game) {
   activeGameId.value = game.id
-  api.post(`/entertainment/games/${game.code}/play`, { score: 0 }).catch(() => {})
+  api.post(`/entertainment/games/${game.code}/play`, { score: 0 })
+    .catch((e) => showToast(e.message || '游戏请求失败', 'toast-error'))
 }
 
 function finishEvent(event) {
-  if (!isLoggedIn.value) return
+  if (!isLoggedIn.value) {
+    showToast('请先登录后再参与活动', 'toast-warn')
+    return
+  }
   api.post(`/entertainment/events/${event.id}/finish`, {})
     .then((wallet) => {
       event.done = true
       applyWallet(wallet)
     })
-    .catch(() => {})
+    .catch((e) => showToast(e.message || '活动提交失败', 'toast-error'))
+}
+
+function showToast(msg, type = 'toast-info') {
+  toastMessage.value = msg
+  toastType.value = type
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastMessage.value = '' }, 3000)
 }
 
 function applyWallet(wallet) {
@@ -1545,4 +1567,23 @@ const fallbackEvents = [
     width: 100%;
   }
 }
+
+.toast-bar {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+.toast-info { background: #1e293b; color: #e2e8f0; }
+.toast-warn { background: #f59e0b; color: #0f172a; }
+.toast-error { background: #ef4444; color: #fff; }
+.toast-fade-enter-active, .toast-fade-leave-active { transition: opacity 0.3s ease; }
+.toast-fade-enter-from, .toast-fade-leave-to { opacity: 0; }
 </style>

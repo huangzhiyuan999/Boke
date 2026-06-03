@@ -1,5 +1,6 @@
 package com.boke.service;
 
+import com.boke.common.BusinessException;
 import com.boke.dto.*;
 import com.boke.entity.*;
 import com.boke.mapper.*;
@@ -45,7 +46,7 @@ public class EntertainmentService {
 
     public EntertainmentGameVO getGame(String code) {
         EntertainmentGame game = gameMapper.findActiveByCode(code);
-        if (game == null) throw new RuntimeException("游戏不存在");
+        if (game == null) throw new BusinessException(404, "游戏不存在");
         return toGameVO(game);
     }
 
@@ -80,7 +81,7 @@ public class EntertainmentService {
     @Transactional
     public EntertainmentWalletVO finishEvent(Long userId, Long eventId) {
         EntertainmentEvent event = eventMapper.selectById(eventId);
-        if (event == null || !"active".equals(event.getStatus())) throw new RuntimeException("活动不存在");
+        if (event == null || !"active".equals(event.getStatus())) throw new BusinessException(404, "活动不存在");
         ensureWallet(userId);
         if (eventRecordMapper.existsRecord(userId, eventId) == 0) {
             EntertainmentEventRecord record = new EntertainmentEventRecord();
@@ -96,7 +97,7 @@ public class EntertainmentService {
     @Transactional
     public EntertainmentWalletVO playGame(Long userId, String code, Integer score) {
         EntertainmentGame game = gameMapper.findActiveByCode(code);
-        if (game == null) throw new RuntimeException("游戏不存在");
+        if (game == null) throw new BusinessException(404, "游戏不存在");
         if (userId != null) ensureWallet(userId);
         EntertainmentGamePlay play = new EntertainmentGamePlay();
         play.setUserId(userId);
