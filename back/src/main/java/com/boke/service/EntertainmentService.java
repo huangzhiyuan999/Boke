@@ -5,12 +5,15 @@ import com.boke.dto.*;
 import com.boke.entity.*;
 import com.boke.mapper.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,15 +29,21 @@ public class EntertainmentService {
     private final EntertainmentGamePlayMapper gamePlayMapper;
     private final UserMapper userMapper;
 
+    @Qualifier("entertainmentExecutor")
+    private final Executor executor;
+
     public EntertainmentHomeVO getHome(Long userId) {
-        List<EntertainmentItemVO> items = itemMapper.findActiveItems().stream()
-                .map(this::toItemVO)
-                .collect(Collectors.toList());
-        List<EntertainmentGameVO> games = gameMapper.findActiveGames().stream()
-                .map(this::toGameVO)
-                .collect(Collectors.toList());
-        List<EntertainmentEventVO> events = getEvents(userId);
-        return new EntertainmentHomeVO(getWallet(userId), items, games, events);
+        CompletableFuture<List<EntertainmentItemVO>> itemsFuture =
+                CompletableFuture.supplyAsync(this::getItems, executor);
+        CompletableFuture<List<EntertainmentGameVO>> gamesFuture =
+                CompletableFuture.supplyAsync(this::getGames, executor);
+        CompletableFuture<List<EntertainmentEventVO>> eventsFuture =
+                CompletableFuture.supplyAsync(() -> getEvents(userId), executor);
+        CompletableFuture<EntertainmentWalletVO> walletFuture =
+                CompletableFuture.supplyAsync(() -> getWallet(userId), executor);
+
+        CompletableFuture.allOf(itemsFuture, gamesFuture, eventsFuture, walletFuture).join();
+        return new EntertainmentHomeVO(walletFuture.join(), itemsFuture.join(), gamesFuture.join(), eventsFuture.join());
     }
 
     public List<EntertainmentItemVO> getItems() {
@@ -42,7 +51,11 @@ public class EntertainmentService {
     }
 
     public List<EntertainmentGameVO> getGames() {
-        return gameMapper.findActiveGames().stream().map(this::toGameVO).collect(Collectors.toList());
+        List<EntertainmentGame> games = gameMapper.findActiveGames();
+        List<CompletableFuture<EntertainmentGameVO>> futures = games.stream()
+                .map(game -> CompletableFuture.supplyAsync(() -> toGameVO(game), executor))
+                .collect(Collectors.toList());
+        return futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
     }
 
     public EntertainmentGameVO getGame(String code) {
