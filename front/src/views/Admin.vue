@@ -94,10 +94,17 @@
 
         <!-- ===== 留言管理 ===== -->
         <div v-if="tab === 'messages'">
-          <div class="section-header"><h2>留言列表</h2></div>
+          <div class="section-header">
+            <h2>留言列表</h2>
+            <div class="message-search">
+              <input v-model="messageSearch" type="search" placeholder="搜索昵称、内容、时间或ID" />
+              <button v-if="messageSearch" type="button" class="search-clear" @click="messageSearch = ''">清空</button>
+            </div>
+          </div>
           <div v-if="adminMessages.length === 0" class="empty-msg">暂无留言</div>
+          <div v-else-if="filteredMessages.length === 0" class="empty-msg">没有找到匹配的留言</div>
           <div class="msg-cards" v-else>
-            <div class="msg-card" v-for="m in adminMessages" :key="m.id">
+            <div class="msg-card" v-for="m in filteredMessages" :key="m.id">
               <div class="msg-card-header">
                 <span class="msg-card-name">{{ m.name }}</span>
                 <span class="msg-card-time">{{ m.time }}</span>
@@ -206,6 +213,7 @@ const stats = ref({ postCount: 0, announcementCount: 0, messageCount: 0, userCou
 const posts = ref([])
 const announcements = ref([])
 const adminMessages = ref([])
+const messageSearch = ref('')
 const adminUsers = ref([])
 const pwdForm = ref({ old: '', new1: '', new2: '' })
 const pwdMsg = ref('')
@@ -228,6 +236,16 @@ const coverColors = [
   'linear-gradient(135deg, #f56c6c, #e63946)',
   'linear-gradient(135deg, #5B8C5A, #7EC8A8)'
 ]
+
+const filteredMessages = computed(() => {
+  const keyword = messageSearch.value.trim().toLowerCase()
+  if (!keyword) return adminMessages.value
+
+  return adminMessages.value.filter(m => {
+    const fields = [m.id, m.name, m.content, m.time]
+    return fields.some(v => String(v || '').toLowerCase().includes(keyword))
+  })
+})
 
 function openCreateModal(type) {
   editingPost.value = null
@@ -390,6 +408,11 @@ function handleLogout() { logout(); router.push('/') }
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-header h2 { font-size: 1rem; margin: 0; }
+.message-search { display: flex; align-items: center; gap: 8px; }
+.message-search input { width: 260px; max-width: 42vw; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; font-size: 0.85rem; font-family: inherit; outline: none; }
+.message-search input:focus { border-color: var(--color-primary-light); box-shadow: 0 0 0 3px rgba(91,140,90,0.12); }
+.search-clear { padding: 7px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; color: var(--color-text-secondary); cursor: pointer; font-family: inherit; font-size: 0.82rem; }
+.search-clear:hover { background: var(--color-bg); color: var(--color-text); }
 .add-btn { padding: 7px 18px; background: var(--color-primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.85rem; font-weight: 500; transition: background 0.2s; }
 .add-btn:hover { background: var(--color-primary-dark); }
 .add-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -453,5 +476,8 @@ function handleLogout() { logout(); router.push('/') }
   .admin-sidebar { width: 180px; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .admin-content { padding: 16px; }
+  .section-header { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .message-search { width: 100%; }
+  .message-search input { flex: 1; width: auto; max-width: none; }
 }
 </style>
