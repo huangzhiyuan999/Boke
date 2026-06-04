@@ -71,13 +71,19 @@
         <div v-if="tab === 'announcements'">
           <div class="section-header">
             <h2>公告列表</h2>
-            <button class="add-btn" @click="openCreateModal('announcement')">+ 新建公告</button>
+            <div class="section-actions">
+              <div class="admin-search">
+                <input v-model="announcementSearch" type="search" placeholder="搜索标题、摘要、日期或ID" />
+                <button v-if="announcementSearch" type="button" class="search-clear" @click="announcementSearch = ''">清空</button>
+              </div>
+              <button class="add-btn" @click="openCreateModal('announcement')">+ 新建公告</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table class="admin-table">
               <thead><tr><th>ID</th><th>标题</th><th>日期</th><th>摘要</th><th>操作</th></tr></thead>
               <tbody>
-                <tr v-for="a in announcements" :key="a.id">
+                <tr v-for="a in filteredAnnouncements" :key="a.id">
                   <td>{{ a.id }}</td>
                   <td class="td-title">{{ a.title }}</td>
                   <td>{{ a.createdAt || a.date }}</td>
@@ -86,6 +92,9 @@
                     <button class="action-btn" @click="openEditModal(a)">编辑</button>
                     <button class="action-btn danger" @click="deletePost(a)">删除</button>
                   </td>
+                </tr>
+                <tr v-if="announcements.length > 0 && filteredAnnouncements.length === 0">
+                  <td colspan="5" class="empty-table-cell">没有找到匹配的公告</td>
                 </tr>
               </tbody>
             </table>
@@ -221,6 +230,7 @@ const tabTitle = computed(() => {
 const stats = ref({ postCount: 0, announcementCount: 0, messageCount: 0, userCount: 0, totalVisits: 0, postTrend: [], userTrend: [] })
 const posts = ref([])
 const announcements = ref([])
+const announcementSearch = ref('')
 const adminMessages = ref([])
 const messageSearch = ref('')
 const adminUsers = ref([])
@@ -253,6 +263,16 @@ const filteredMessages = computed(() => {
 
   return adminMessages.value.filter(m => {
     const fields = [m.id, m.name, m.content, m.time]
+    return fields.some(v => String(v || '').toLowerCase().includes(keyword))
+  })
+})
+
+const filteredAnnouncements = computed(() => {
+  const keyword = announcementSearch.value.trim().toLowerCase()
+  if (!keyword) return announcements.value
+
+  return announcements.value.filter(a => {
+    const fields = [a.id, a.title, a.summary, a.content, a.createdAt, a.date, ...(a.tags || [])]
     return fields.some(v => String(v || '').toLowerCase().includes(keyword))
   })
 })
@@ -430,6 +450,7 @@ function handleLogout() { logout(); router.push('/') }
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-header h2 { font-size: 1rem; margin: 0; }
+.section-actions { display: flex; align-items: center; gap: 10px; }
 .message-search, .admin-search { display: flex; align-items: center; gap: 8px; }
 .message-search input, .admin-search input { width: 260px; max-width: 42vw; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; font-size: 0.85rem; font-family: inherit; outline: none; }
 .message-search input:focus, .admin-search input:focus { border-color: var(--color-primary-light); box-shadow: 0 0 0 3px rgba(91,140,90,0.12); }
@@ -500,6 +521,7 @@ function handleLogout() { logout(); router.push('/') }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .admin-content { padding: 16px; }
   .section-header { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .section-actions { width: 100%; align-items: stretch; flex-direction: column; }
   .message-search, .admin-search { width: 100%; }
   .message-search input, .admin-search input { flex: 1; width: auto; max-width: none; }
 }
