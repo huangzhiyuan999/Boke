@@ -74,7 +74,6 @@ public class EntertainmentService {
     }
 
     public EntertainmentWalletVO getWallet(Long userId) {
-        if (userId == null) return new EntertainmentWalletVO(2680, false);
         EntertainmentWallet wallet = ensureWallet(userId);
         boolean checkedIn = LocalDate.now().equals(wallet.getCheckedInDate());
         return new EntertainmentWalletVO(wallet.getCoins(), checkedIn);
@@ -114,7 +113,7 @@ public class EntertainmentService {
     public EntertainmentWalletVO playGame(Long userId, String code, Integer score) {
         EntertainmentGame game = gameMapper.findActiveByCode(code);
         if (game == null) throw new BusinessException(404, "游戏不存在");
-        if (userId != null) ensureWallet(userId);
+        ensureWallet(userId);
         EntertainmentGamePlay play = new EntertainmentGamePlay();
         play.setUserId(userId);
         play.setGameId(game.getId());

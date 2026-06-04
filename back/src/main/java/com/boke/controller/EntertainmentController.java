@@ -1,5 +1,6 @@
 package com.boke.controller;
 
+import com.boke.common.BusinessException;
 import com.boke.common.Result;
 import com.boke.dto.*;
 import com.boke.service.EntertainmentService;
@@ -18,7 +19,7 @@ public class EntertainmentController {
 
     @GetMapping
     public Result<EntertainmentHomeVO> home(Authentication auth) {
-        return Result.success(entertainmentService.getHome(currentUserId(auth)));
+        return Result.success(entertainmentService.getHome(requiredUserId(auth)));
     }
 
     @GetMapping("/items")
@@ -38,28 +39,22 @@ public class EntertainmentController {
 
     @GetMapping("/events")
     public Result<List<EntertainmentEventVO>> events(Authentication auth) {
-        return Result.success(entertainmentService.getEvents(currentUserId(auth)));
+        return Result.success(entertainmentService.getEvents(requiredUserId(auth)));
     }
 
     @GetMapping("/wallet")
     public Result<EntertainmentWalletVO> wallet(Authentication auth) {
-        Long userId = currentUserId(auth);
-        if (userId == null) return Result.error(401, "未登录");
-        return Result.success(entertainmentService.getWallet(userId));
+        return Result.success(entertainmentService.getWallet(requiredUserId(auth)));
     }
 
     @PostMapping("/check-in")
     public Result<EntertainmentWalletVO> checkIn(Authentication auth) {
-        Long userId = currentUserId(auth);
-        if (userId == null) return Result.error(401, "未登录");
-        return Result.success(entertainmentService.checkIn(userId));
+        return Result.success(entertainmentService.checkIn(requiredUserId(auth)));
     }
 
     @PostMapping("/events/{id}/finish")
     public Result<EntertainmentWalletVO> finishEvent(@PathVariable Long id, Authentication auth) {
-        Long userId = currentUserId(auth);
-        if (userId == null) return Result.error(401, "未登录");
-        return Result.success(entertainmentService.finishEvent(userId, id));
+        return Result.success(entertainmentService.finishEvent(requiredUserId(auth), id));
     }
 
     @PostMapping("/games/{code}/play")
@@ -67,17 +62,16 @@ public class EntertainmentController {
                                                   @RequestBody(required = false) GamePlayRequest request,
                                                   Authentication auth) {
         Integer score = request != null ? request.getScore() : 0;
-        return Result.success(entertainmentService.playGame(currentUserId(auth), code, score));
+        return Result.success(entertainmentService.playGame(requiredUserId(auth), code, score));
     }
 
     @PostMapping("/items/{id}/buy")
     public Result<EntertainmentWalletVO> buyItem(@PathVariable Long id, Authentication auth) {
-        Long userId = currentUserId(auth);
-        if (userId == null) return Result.error(401, "未登录");
-        return Result.success(entertainmentService.buyItem(userId, id));
+        return Result.success(entertainmentService.buyItem(requiredUserId(auth), id));
     }
 
-    private Long currentUserId(Authentication auth) {
-        return auth != null ? (Long) auth.getPrincipal() : null;
+    private Long requiredUserId(Authentication auth) {
+        if (auth == null) throw new BusinessException(401, "未登录");
+        return (Long) auth.getPrincipal();
     }
 }

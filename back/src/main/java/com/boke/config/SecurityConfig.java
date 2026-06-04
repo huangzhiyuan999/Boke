@@ -35,17 +35,16 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,
                     "/api/posts/**", "/api/tags/**", "/api/config/**",
                     "/api/feeds/**", "/api/messages/**", "/api/comments/**",
-                    "/api/entertainment/**"
+                    "/uploads/**"
                 ).permitAll()
                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers("/api/visits").permitAll()
                 .requestMatchers("/api/admin/**").authenticated()
+                .requestMatchers("/api/entertainment/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/messages").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/upload").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/feeds/**", "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/follows/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/entertainment/check-in", "/api/entertainment/events/**", "/api/entertainment/items/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/entertainment/games/**").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/**").authenticated()
                 .anyRequest().permitAll()

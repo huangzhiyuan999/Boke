@@ -73,7 +73,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const authRequired = ['Admin', 'Following'].includes(to.name)
+  const authRequired = ['Admin', 'Following', 'Entertainment'].includes(to.name)
   const user = getAuth()
   if (authRequired && !user) {
     next('/login?msg=请先登录')
