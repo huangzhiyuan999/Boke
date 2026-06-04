@@ -46,13 +46,19 @@
         <div v-if="tab === 'articles'">
           <div class="section-header">
             <h2>文章列表</h2>
-            <button class="add-btn" @click="openCreateModal('post')">+ 新建文章</button>
+            <div class="section-actions">
+              <div class="admin-search">
+                <input v-model="articleSearch" type="search" placeholder="搜索标题、标签、日期或ID" />
+                <button v-if="articleSearch" type="button" class="search-clear" @click="articleSearch = ''">清空</button>
+              </div>
+              <button class="add-btn" @click="openCreateModal('post')">+ 新建文章</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table class="admin-table">
               <thead><tr><th>ID</th><th>标题</th><th>日期</th><th>标签</th><th>操作</th></tr></thead>
               <tbody>
-                <tr v-for="p in posts" :key="p.id">
+                <tr v-for="p in filteredPosts" :key="p.id">
                   <td>{{ p.id }}</td>
                   <td class="td-title">{{ p.title }}</td>
                   <td>{{ p.createdAt || p.date }}</td>
@@ -61,6 +67,9 @@
                     <button class="action-btn" @click="openEditModal(p)">编辑</button>
                     <button class="action-btn danger" @click="deletePost(p)">删除</button>
                   </td>
+                </tr>
+                <tr v-if="posts.length > 0 && filteredPosts.length === 0">
+                  <td colspan="5" class="empty-table-cell">没有找到匹配的文章</td>
                 </tr>
               </tbody>
             </table>
@@ -229,6 +238,7 @@ const tabTitle = computed(() => {
 
 const stats = ref({ postCount: 0, announcementCount: 0, messageCount: 0, userCount: 0, totalVisits: 0, postTrend: [], userTrend: [] })
 const posts = ref([])
+const articleSearch = ref('')
 const announcements = ref([])
 const announcementSearch = ref('')
 const adminMessages = ref([])
@@ -256,6 +266,16 @@ const coverColors = [
   'linear-gradient(135deg, #f56c6c, #e63946)',
   'linear-gradient(135deg, #5B8C5A, #7EC8A8)'
 ]
+
+const filteredPosts = computed(() => {
+  const keyword = articleSearch.value.trim().toLowerCase()
+  if (!keyword) return posts.value
+
+  return posts.value.filter(p => {
+    const fields = [p.id, p.title, p.summary, p.content, p.createdAt, p.date, ...(p.tags || [])]
+    return fields.some(v => String(v || '').toLowerCase().includes(keyword))
+  })
+})
 
 const filteredMessages = computed(() => {
   const keyword = messageSearch.value.trim().toLowerCase()
