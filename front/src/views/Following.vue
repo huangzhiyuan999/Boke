@@ -231,4 +231,115 @@ function openAddModal() {
 .modal-user-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); transition: background 0.15s; }
 .modal-user-card:hover { background: var(--color-bg); }
 .modal-empty { text-align: center; padding: 32px 0; color: var(--color-text-muted); font-size: 0.9rem; }
+
+@media (max-width: 640px) {
+  .page-bg {
+    background-attachment: scroll;
+  }
+
+  .following-page {
+    padding-top: 20px;
+    padding-bottom: 44px;
+  }
+
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .page-title {
+    width: 100%;
+    font-size: 1.45rem;
+    line-height: 1.25;
+    padding: 0 2px;
+    white-space: nowrap;
+  }
+
+  .header-right {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .page-search {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.9);
+  }
+
+  .add-follow-btn {
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+  }
+
+  .follow-card {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 0;
+  }
+
+  .follow-avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 1rem;
+  }
+
+  .follow-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .follow-name {
+    line-height: 1.3;
+  }
+
+  .follow-bio {
+    line-height: 1.5;
+  }
+
+  .follow-btn {
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+  }
+
+  .suggest-section {
+    margin-top: 28px;
+  }
+
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .modal-card {
+    padding: 20px;
+    max-height: calc(100vh - 24px);
+    border-radius: 10px;
+  }
+
+  .modal-user-card {
+    align-items: flex-start;
+    padding: 12px 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .header-right {
+    grid-template-columns: 1fr;
+  }
+
+  .add-follow-btn {
+    width: 100%;
+  }
+}
 </style>
