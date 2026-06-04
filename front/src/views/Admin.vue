@@ -117,12 +117,18 @@
 
         <!-- ===== 用户管理 ===== -->
         <div v-if="tab === 'users'">
-          <div class="section-header"><h2>用户列表</h2></div>
+          <div class="section-header">
+            <h2>用户列表</h2>
+            <div class="admin-search">
+              <input v-model="userSearch" type="search" placeholder="搜索用户名、邮箱、状态或ID" />
+              <button v-if="userSearch" type="button" class="search-clear" @click="userSearch = ''">清空</button>
+            </div>
+          </div>
           <div class="table-wrap">
             <table class="admin-table">
               <thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>注册时间</th><th>状态</th><th>角色</th><th>操作</th></tr></thead>
               <tbody>
-                <tr v-for="u in adminUsers" :key="u.id">
+                <tr v-for="u in filteredUsers" :key="u.id">
                   <td>{{ u.id }}</td>
                   <td class="td-title">{{ u.username }}</td>
                   <td>{{ u.email }}</td>
@@ -135,6 +141,9 @@
                     <button class="action-btn" v-if="u.status !== 'banned'" @click="setUserStatus(u, 'banned')">封禁</button>
                     <button class="action-btn danger" v-if="u.role !== 'admin'" @click="deleteUser(u)">删除</button>
                   </td>
+                </tr>
+                <tr v-if="adminUsers.length > 0 && filteredUsers.length === 0">
+                  <td colspan="7" class="empty-table-cell">没有找到匹配的用户</td>
                 </tr>
               </tbody>
             </table>
@@ -215,6 +224,7 @@ const announcements = ref([])
 const adminMessages = ref([])
 const messageSearch = ref('')
 const adminUsers = ref([])
+const userSearch = ref('')
 const pwdForm = ref({ old: '', new1: '', new2: '' })
 const pwdMsg = ref('')
 const pwdMsgType = ref('')
@@ -243,6 +253,18 @@ const filteredMessages = computed(() => {
 
   return adminMessages.value.filter(m => {
     const fields = [m.id, m.name, m.content, m.time]
+    return fields.some(v => String(v || '').toLowerCase().includes(keyword))
+  })
+})
+
+const filteredUsers = computed(() => {
+  const keyword = userSearch.value.trim().toLowerCase()
+  if (!keyword) return adminUsers.value
+
+  return adminUsers.value.filter(u => {
+    const roleText = u.role === 'admin' ? '管理员' : '用户'
+    const statusText = statusMap[u.status] || u.status
+    const fields = [u.id, u.username, u.email, u.createdAt, u.status, statusText, u.role, roleText]
     return fields.some(v => String(v || '').toLowerCase().includes(keyword))
   })
 })
@@ -408,9 +430,9 @@ function handleLogout() { logout(); router.push('/') }
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-header h2 { font-size: 1rem; margin: 0; }
-.message-search { display: flex; align-items: center; gap: 8px; }
-.message-search input { width: 260px; max-width: 42vw; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; font-size: 0.85rem; font-family: inherit; outline: none; }
-.message-search input:focus { border-color: var(--color-primary-light); box-shadow: 0 0 0 3px rgba(91,140,90,0.12); }
+.message-search, .admin-search { display: flex; align-items: center; gap: 8px; }
+.message-search input, .admin-search input { width: 260px; max-width: 42vw; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; font-size: 0.85rem; font-family: inherit; outline: none; }
+.message-search input:focus, .admin-search input:focus { border-color: var(--color-primary-light); box-shadow: 0 0 0 3px rgba(91,140,90,0.12); }
 .search-clear { padding: 7px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; color: var(--color-text-secondary); cursor: pointer; font-family: inherit; font-size: 0.82rem; }
 .search-clear:hover { background: var(--color-bg); color: var(--color-text); }
 .add-btn { padding: 7px 18px; background: var(--color-primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.85rem; font-weight: 500; transition: background 0.2s; }
@@ -422,6 +444,7 @@ function handleLogout() { logout(); router.push('/') }
 .admin-table th, .admin-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #E2E8F0; }
 .admin-table thead { background: #F8FAFC; }
 .admin-table th { color: var(--color-text-muted); font-weight: 500; font-size: 0.8rem; }
+.empty-table-cell { text-align: center; padding: 36px 14px; color: var(--color-text-muted); }
 .td-title { font-weight: 500; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .td-summary { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-secondary); }
 
@@ -477,7 +500,7 @@ function handleLogout() { logout(); router.push('/') }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .admin-content { padding: 16px; }
   .section-header { align-items: flex-start; flex-direction: column; gap: 10px; }
-  .message-search { width: 100%; }
-  .message-search input { flex: 1; width: auto; max-width: none; }
+  .message-search, .admin-search { width: 100%; }
+  .message-search input, .admin-search input { flex: 1; width: auto; max-width: none; }
 }
 </style>
