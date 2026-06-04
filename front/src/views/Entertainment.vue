@@ -209,10 +209,67 @@
               </div>
             </div>
             <div class="playground">
-              <div class="play-window">
+              <div v-if="selectedGame.code === 'snake'" class="play-window game-play-panel">
+                <div class="play-head">
+                  <div>
+                    <strong>{{ selectedGame.demoTitle }}</strong>
+                    <span>{{ selectedGame.demoText }}</span>
+                  </div>
+                  <button type="button" @click="startGame(selectedGame)">{{ snake.running ? '重新开始' : '开始游戏' }}</button>
+                </div>
+                <div class="snake-stats">
+                  <span>分数 <strong>{{ snake.score }}</strong></span>
+                  <span>速度 <strong>{{ snake.speedLabel }}</strong></span>
+                  <span>{{ snake.message }}</span>
+                </div>
+                <div class="snake-board" :style="{ '--snake-size': snake.size }">
+                  <div
+                    v-for="cell in snakeCells"
+                    :key="cell.key"
+                    class="snake-cell"
+                    :class="{ head: cell.isHead, body: cell.isBody, food: cell.isFood }"
+                  ></div>
+                </div>
+                <div class="mobile-directions">
+                  <button type="button" @click="setSnakeDirection('up')">↑</button>
+                  <button type="button" @click="setSnakeDirection('left')">←</button>
+                  <button type="button" @click="setSnakeDirection('down')">↓</button>
+                  <button type="button" @click="setSnakeDirection('right')">→</button>
+                </div>
+              </div>
+              <div v-else-if="selectedGame.code === 'reaction'" class="play-window game-play-panel">
+                <div class="play-head">
+                  <div>
+                    <strong>{{ selectedGame.demoTitle }}</strong>
+                    <span>{{ selectedGame.demoText }}</span>
+                  </div>
+                  <button type="button" @click="startGame(selectedGame)">{{ reaction.running ? '重新开始' : '开始训练' }}</button>
+                </div>
+                <div class="reaction-stats">
+                  <span>命中 {{ reaction.hits }}/{{ reaction.rounds }}</span>
+                  <span>连击 {{ reaction.combo }}</span>
+                  <span>得分 {{ reaction.score }}</span>
+                </div>
+                <div class="scope-stage" role="button" tabindex="0" @click="handleScopeMiss">
+                  <span class="scope-ring"></span>
+                  <span class="scope-line horizontal"></span>
+                  <span class="scope-line vertical"></span>
+                  <button
+                    v-if="reaction.targetVisible"
+                    type="button"
+                    class="runner-target"
+                    :style="{ top: `${reaction.targetTop}%`, '--run-ms': `${reaction.targetDuration}ms` }"
+                    @click.stop="hitReactionTarget"
+                  >
+                    <span></span>
+                  </button>
+                </div>
+                <div class="reaction-status">{{ reaction.message }}</div>
+              </div>
+              <div v-else class="play-window">
                 <strong>{{ selectedGame.demoTitle }}</strong>
                 <span>{{ selectedGame.demoText }}</span>
-                <button type="button" @click="startGame(selectedGame)">{{ activeGameId === selectedGame.id ? '模拟中' : '开始模拟' }}</button>
+                <button type="button" @click="startGame(selectedGame)">开始模拟</button>
               </div>
               <div class="rank-panel">
                 <h3>本周排行</h3>
@@ -304,7 +361,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../utils/api.js'
 import { isLoggedIn } from '../stores/auth.js'
@@ -325,6 +382,35 @@ const imageBase = '/photo/entertainment/'
 const shopItems = ref([])
 const games = ref([])
 const events = ref([])
+let snakeTimer = null
+let reactionTimer = null
+let reactionHideTimer = null
+
+const snake = reactive({
+  size: 16,
+  body: [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }],
+  food: { x: 11, y: 8 },
+  direction: 'right',
+  nextDirection: 'right',
+  running: false,
+  score: 0,
+  delay: 180,
+  speedLabel: '1.0x',
+  message: '点击开始，方向键或 WASD 控制。'
+})
+
+const reaction = reactive({
+  running: false,
+  targetVisible: false,
+  targetTop: 48,
+  targetDuration: 1200,
+  rounds: 0,
+  hits: 0,
+  combo: 0,
+  score: 0,
+  appearedAt: 0,
+  message: '点击开始训练，等待人影进入狙击镜。'
+})
 
 function coverStyle(image) {
   const url = image?.startsWith('/') ? image : `${imageBase}${image}`
@@ -363,6 +449,25 @@ const selectedGame = computed(() => {
   return games.value.find((game) => game.code === route.query.game || String(game.id) === String(route.query.game)) || null
 })
 
+const snakeCells = computed(() => {
+  const bodyKeys = new Set(snake.body.map((part) => `${part.x}-${part.y}`))
+  const headKey = `${snake.body[0].x}-${snake.body[0].y}`
+  const foodKey = `${snake.food.x}-${snake.food.y}`
+  const cells = []
+  for (let y = 0; y < snake.size; y++) {
+    for (let x = 0; x < snake.size; x++) {
+      const key = `${x}-${y}`
+      cells.push({
+        key,
+        isHead: key === headKey,
+        isBody: bodyKeys.has(key) && key !== headKey,
+        isFood: key === foodKey
+      })
+    }
+  }
+  return cells
+})
+
 const filteredShopItems = computed(() => {
   const key = keyword.value.trim().toLowerCase()
   const filtered = shopItems.value.filter((item) => {
@@ -393,8 +498,187 @@ function handleCheckIn() {
 
 function startGame(game) {
   activeGameId.value = game.id
-  api.post(`/entertainment/games/${game.code}/play`, { score: 0 })
+  if (game.code === 'snake') {
+    startSnake()
+    return
+  }
+  if (game.code === 'reaction') {
+    startReaction()
+    return
+  }
+  submitGameScore(game.code, 0)
+}
+
+function submitGameScore(code, score) {
+  api.post(`/entertainment/games/${code}/play`, { score })
     .catch((e) => showToast(e.message || '游戏请求失败', 'toast-error'))
+}
+
+function startSnake() {
+  clearInterval(snakeTimer)
+  Object.assign(snake, {
+    body: [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }],
+    food: randomSnakeFood([{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }]),
+    direction: 'right',
+    nextDirection: 'right',
+    running: true,
+    score: 0,
+    delay: 180,
+    speedLabel: '1.0x',
+    message: '速度会越来越快，稳住。'
+  })
+  scheduleSnakeTick()
+}
+
+function scheduleSnakeTick() {
+  clearInterval(snakeTimer)
+  snakeTimer = setInterval(moveSnake, snake.delay)
+}
+
+function moveSnake() {
+  snake.direction = snake.nextDirection
+  const delta = {
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 }
+  }[snake.direction]
+  const head = snake.body[0]
+  const next = { x: head.x + delta.x, y: head.y + delta.y }
+  const willEat = next.x === snake.food.x && next.y === snake.food.y
+  const hitWall = next.x < 0 || next.y < 0 || next.x >= snake.size || next.y >= snake.size
+  const collisionBody = willEat ? snake.body : snake.body.slice(0, -1)
+  const hitSelf = collisionBody.some((part) => part.x === next.x && part.y === next.y)
+
+  if (hitWall || hitSelf) {
+    endSnake()
+    return
+  }
+
+  snake.body.unshift(next)
+  if (willEat) {
+    snake.score += 120
+    snake.delay = Math.max(58, Math.round(snake.delay * 0.9))
+    snake.speedLabel = `${(180 / snake.delay).toFixed(1)}x`
+    snake.food = randomSnakeFood(snake.body)
+    snake.message = snake.delay <= 70 ? '已经进入极限速度。' : '加速中，别眨眼。'
+    scheduleSnakeTick()
+  } else {
+    snake.body.pop()
+  }
+}
+
+function endSnake() {
+  clearInterval(snakeTimer)
+  snake.running = false
+  snake.message = `游戏结束，得分 ${snake.score}。`
+  submitGameScore('snake', snake.score)
+}
+
+function randomSnakeFood(body) {
+  const occupied = new Set(body.map((part) => `${part.x}-${part.y}`))
+  const empty = []
+  for (let y = 0; y < snake.size; y++) {
+    for (let x = 0; x < snake.size; x++) {
+      if (!occupied.has(`${x}-${y}`)) empty.push({ x, y })
+    }
+  }
+  return empty[Math.floor(Math.random() * empty.length)] || { x: 0, y: 0 }
+}
+
+function setSnakeDirection(direction) {
+  const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' }
+  if (opposite[direction] === snake.direction || opposite[direction] === snake.nextDirection) return
+  snake.nextDirection = direction
+}
+
+function handleSnakeKey(e) {
+  const map = {
+    ArrowUp: 'up',
+    KeyW: 'up',
+    ArrowDown: 'down',
+    KeyS: 'down',
+    ArrowLeft: 'left',
+    KeyA: 'left',
+    ArrowRight: 'right',
+    KeyD: 'right'
+  }
+  if (!map[e.code]) return
+  e.preventDefault()
+  setSnakeDirection(map[e.code])
+}
+
+function startReaction() {
+  clearTimeout(reactionTimer)
+  clearTimeout(reactionHideTimer)
+  Object.assign(reaction, {
+    running: true,
+    targetVisible: false,
+    targetTop: 48,
+    targetDuration: 1200,
+    rounds: 0,
+    hits: 0,
+    combo: 0,
+    score: 0,
+    appearedAt: 0,
+    message: '准备，目标会从镜头前快速穿过。'
+  })
+  scheduleReactionTarget(700)
+}
+
+function scheduleReactionTarget(delay = 700) {
+  clearTimeout(reactionTimer)
+  if (!reaction.running) return
+  reactionTimer = setTimeout(showReactionTarget, delay)
+}
+
+function showReactionTarget() {
+  if (!reaction.running) return
+  reaction.rounds += 1
+  reaction.targetTop = 24 + Math.floor(Math.random() * 50)
+  reaction.targetDuration = Math.max(620, 1220 - reaction.rounds * 42)
+  reaction.targetVisible = true
+  reaction.appearedAt = performance.now()
+  reaction.message = '目标出现，开火！'
+
+  clearTimeout(reactionHideTimer)
+  reactionHideTimer = setTimeout(() => {
+    if (!reaction.targetVisible) return
+    reaction.targetVisible = false
+    reaction.combo = 0
+    reaction.message = '目标逃脱，下一轮准备。'
+    if (reaction.rounds >= 10) endReaction()
+    else scheduleReactionTarget(650)
+  }, reaction.targetDuration)
+}
+
+function hitReactionTarget() {
+  if (!reaction.running || !reaction.targetVisible) return
+  const elapsed = performance.now() - reaction.appearedAt
+  const gain = Math.max(45, Math.round(180 - elapsed / 8)) + reaction.combo * 12
+  reaction.hits += 1
+  reaction.combo += 1
+  reaction.score += gain
+  reaction.targetVisible = false
+  reaction.message = `命中 +${gain}，反应 ${Math.round(elapsed)}ms。`
+  clearTimeout(reactionHideTimer)
+  if (reaction.rounds >= 10) endReaction()
+  else scheduleReactionTarget(Math.max(360, 720 - reaction.combo * 35))
+}
+
+function handleScopeMiss() {
+  if (!reaction.running) return
+  reaction.combo = 0
+  reaction.message = '空枪，连击中断。'
+}
+
+function endReaction() {
+  clearTimeout(reactionTimer)
+  clearTimeout(reactionHideTimer)
+  reaction.running = false
+  reaction.targetVisible = false
+  reaction.message = `训练结束，命中 ${reaction.hits}/10，得分 ${reaction.score}。`
+  submitGameScore('reaction', reaction.score)
 }
 
 function finishEvent(event) {
@@ -454,7 +738,9 @@ async function loadEntertainment() {
     const data = await api.get('/entertainment')
     applyWallet(data.wallet)
     shopItems.value = data.items?.length ? data.items : fallbackShopItems
-    games.value = data.games?.length ? data.games.map(normalizeGame) : fallbackGames
+    const serverGames = data.games?.length ? data.games.map(normalizeGame) : fallbackGames
+    games.value = serverGames.filter((game) => ['snake', 'reaction'].includes(game.code))
+    if (!games.value.length) games.value = fallbackGames
     events.value = data.events?.length ? data.events : fallbackEvents
   } catch (e) {
     shopItems.value = fallbackShopItems
@@ -463,7 +749,17 @@ async function loadEntertainment() {
   }
 }
 
-onMounted(loadEntertainment)
+onMounted(() => {
+  loadEntertainment()
+  window.addEventListener('keydown', handleSnakeKey)
+})
+
+onBeforeUnmount(() => {
+  clearInterval(snakeTimer)
+  clearTimeout(reactionTimer)
+  clearTimeout(reactionHideTimer)
+  window.removeEventListener('keydown', handleSnakeKey)
+})
 
 const fallbackShopItems = [
   { id: 1, name: '薄荷头像框', category: '头像装扮', desc: '清爽绿色头像装饰，展示 7 天。', price: 320, badge: 'NEW', stock: 86, sales: 1240, image: 'product-frame.jpg' },
@@ -478,52 +774,36 @@ const fallbackShopItems = [
 
 const fallbackGames = [
   {
-    id: 'speed',
-    code: 'speed',
-    name: '反应力挑战',
-    short: 'GO',
-    genre: '街机反应',
-    desc: '在倒计时结束瞬间点击，越接近 0 分数越高。',
-    tags: ['反应', '单人', '排行榜'],
-    rating: '96%',
-    players: 1280,
+    id: 'snake',
+    code: 'snake',
+    name: '贪吃蛇极限加速',
+    short: 'SNAKE',
+    genre: '街机生存',
+    desc: '经典贪吃蛇玩法，吃到食物会得分，同时移动速度越来越快，挑战不会真正通关。',
+    tags: ['贪吃蛇', '加速', '生存'],
+    rating: '97%',
+    players: 1680,
     image: 'game-speed.jpg',
-    detailBg: "linear-gradient(135deg, rgba(15,23,42,0.88), rgba(6,95,70,0.78)), url('/photo/entertainment/game-speed.jpg') center / cover no-repeat",
-    demoTitle: '倒计时就绪',
-    demoText: '模拟区域会记录点击时机，后续接入真实小游戏逻辑。',
-    ranks: [{ name: '星野', score: 9820 }, { name: '小墨', score: 9340 }, { name: '阿川', score: 9020 }]
+    detailBg: "linear-gradient(135deg, rgba(15,23,42,0.9), rgba(21,128,61,0.78)), url('/photo/entertainment/game-speed.jpg') center / cover no-repeat",
+    demoTitle: '极限蛇道已就绪',
+    demoText: '方向键或 WASD 控制移动。每吃一枚能量点，速度都会提升，越后面越难稳住。',
+    ranks: [{ name: '星野', score: 9820 }, { name: '小墨', score: 9340 }, { name: '青禾', score: 9020 }]
   },
   {
-    id: 'memory',
-    code: 'memory',
-    name: '记忆翻牌',
-    short: 'MEM',
-    genre: '休闲益智',
-    desc: '翻开卡片寻找相同图案，模拟排行数据。',
-    tags: ['记忆', '休闲', '轻量'],
-    rating: '93%',
-    players: 860,
+    id: 'reaction',
+    code: 'reaction',
+    name: '狙击反应训练',
+    short: 'AIM',
+    genre: '反应射击',
+    desc: '参考 CS 热身训练的狙击镜反应小游戏，目标横向跳过镜头时点击射击，命中越快得分越高。',
+    tags: ['狙击', '反应', '射击'],
+    rating: '95%',
+    players: 1420,
     image: 'game-memory.jpg',
-    detailBg: "linear-gradient(135deg, rgba(15,23,42,0.88), rgba(88,28,135,0.78)), url('/photo/entertainment/game-memory.jpg') center / cover no-repeat",
-    demoTitle: '翻牌局已创建',
-    demoText: '这里预留卡牌矩阵和计步统计，当前为前端模拟。',
-    ranks: [{ name: '南枝', score: 28 }, { name: '青禾', score: 31 }, { name: '云里', score: 36 }]
-  },
-  {
-    id: 'typing',
-    code: 'typing',
-    name: '打字冲刺',
-    short: 'ABC',
-    genre: '键盘练习',
-    desc: '限时输入随机词组，统计速度和准确率。',
-    tags: ['键盘', '练习', '速度'],
-    rating: '91%',
-    players: 640,
-    image: 'game-typing.jpg',
-    detailBg: "linear-gradient(135deg, rgba(15,23,42,0.88), rgba(194,65,12,0.78)), url('/photo/entertainment/game-typing.jpg') center / cover no-repeat",
-    demoTitle: '词组池准备完成',
-    demoText: '模拟输入区会展示速度和准确率，后续可接真实计时。',
-    ranks: [{ name: '北辰', score: 136 }, { name: '林夏', score: 124 }, { name: '知更', score: 119 }]
+    detailBg: "linear-gradient(135deg, rgba(15,23,42,0.9), rgba(127,29,29,0.74)), url('/photo/entertainment/game-memory.jpg') center / cover no-repeat",
+    demoTitle: '靶场热身开始',
+    demoText: '盯住狙击镜，有人影跳过时点击开火。越快命中，连击越高。',
+    ranks: [{ name: '冷枪', score: 812 }, { name: '阿川', score: 760 }, { name: '南枝', score: 715 }]
   }
 ]
 
@@ -1332,6 +1612,191 @@ const fallbackEvents = [
   font-size: 1.25rem;
 }
 
+.game-play-panel {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.play-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.play-head div {
+  display: grid;
+  gap: 6px;
+}
+
+.snake-stats,
+.reaction-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.snake-stats span,
+.reaction-stats span,
+.reaction-status {
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.snake-stats strong {
+  color: #16a34a;
+}
+
+.snake-board {
+  --snake-size: 16;
+  width: min(100%, 430px);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--snake-size), 1fr);
+  gap: 2px;
+  align-self: center;
+  padding: 10px;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(15,23,42,0.96), rgba(22,101,52,0.9)),
+    #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.snake-cell {
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.snake-cell.head {
+  background: #facc15;
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.68);
+}
+
+.snake-cell.body {
+  background: #22c55e;
+}
+
+.snake-cell.food {
+  background: #ef4444;
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.72);
+}
+
+.mobile-directions {
+  display: none;
+  grid-template-columns: repeat(3, 42px);
+  justify-content: center;
+  gap: 8px;
+}
+
+.mobile-directions button {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: #172033;
+  color: #fff;
+  font: inherit;
+  font-weight: 900;
+}
+
+.mobile-directions button:first-child {
+  grid-column: 2;
+}
+
+.scope-stage {
+  position: relative;
+  width: min(100%, 560px);
+  aspect-ratio: 16 / 9;
+  align-self: center;
+  overflow: hidden;
+  border: none;
+  border-radius: 18px;
+  cursor: crosshair;
+  background:
+    linear-gradient(90deg, rgba(15,23,42,0.85), rgba(15,23,42,0.28), rgba(15,23,42,0.85)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 28px),
+    linear-gradient(135deg, #475569, #111827);
+}
+
+.scope-ring {
+  position: absolute;
+  inset: 10%;
+  border: 2px solid rgba(255,255,255,0.78);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 999px rgba(0,0,0,0.34),
+    inset 0 0 28px rgba(255,255,255,0.12);
+}
+
+.scope-line {
+  position: absolute;
+  background: rgba(255,255,255,0.72);
+}
+
+.scope-line.horizontal {
+  left: 8%;
+  right: 8%;
+  top: 50%;
+  height: 1px;
+}
+
+.scope-line.vertical {
+  top: 8%;
+  bottom: 8%;
+  left: 50%;
+  width: 1px;
+}
+
+.runner-target {
+  --run-ms: 1200ms;
+  position: absolute;
+  left: -70px;
+  width: 54px;
+  height: 86px;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: crosshair;
+  transform: translateY(-50%);
+  animation: runner-pass var(--run-ms) linear forwards;
+}
+
+.runner-target span {
+  position: absolute;
+  inset: 8px 12px 0;
+  border-radius: 18px 18px 8px 8px;
+  background: linear-gradient(180deg, #f8fafc 0 18%, #dc2626 18% 58%, #111827 58%);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.42);
+}
+
+.runner-target span::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fbbf24;
+  transform: translateX(-50%);
+}
+
+.reaction-status {
+  width: fit-content;
+  align-self: center;
+}
+
+@keyframes runner-pass {
+  from { left: -70px; }
+  to { left: calc(100% + 70px); }
+}
+
 .rank-panel ol {
   margin: 0;
   padding: 0;
@@ -1584,6 +2049,18 @@ const fallbackEvents = [
 
   .game-art-large {
     width: 100%;
+  }
+
+  .play-head {
+    flex-direction: column;
+  }
+
+  .play-head button {
+    width: 100%;
+  }
+
+  .mobile-directions {
+    display: grid;
   }
 }
 
