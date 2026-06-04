@@ -59,11 +59,11 @@
               <thead><tr><th>ID</th><th>标题</th><th>日期</th><th>标签</th><th>操作</th></tr></thead>
               <tbody>
                 <tr v-for="p in filteredPosts" :key="p.id">
-                  <td>{{ p.id }}</td>
-                  <td class="td-title">{{ p.title }}</td>
-                  <td>{{ p.createdAt || p.date }}</td>
-                  <td><span v-for="t in (p.tags || [])" :key="t" class="mini-tag">{{ t }}</span></td>
-                  <td>
+                  <td data-label="ID">{{ p.id }}</td>
+                  <td data-label="标题" class="td-title">{{ p.title }}</td>
+                  <td data-label="日期">{{ p.createdAt || p.date }}</td>
+                  <td data-label="标签"><span v-for="t in (p.tags || [])" :key="t" class="mini-tag">{{ t }}</span></td>
+                  <td data-label="操作">
                     <button class="action-btn" @click="openEditModal(p)">编辑</button>
                     <button class="action-btn danger" @click="deletePost(p)">删除</button>
                   </td>
@@ -93,11 +93,11 @@
               <thead><tr><th>ID</th><th>标题</th><th>日期</th><th>摘要</th><th>操作</th></tr></thead>
               <tbody>
                 <tr v-for="a in filteredAnnouncements" :key="a.id">
-                  <td>{{ a.id }}</td>
-                  <td class="td-title">{{ a.title }}</td>
-                  <td>{{ a.createdAt || a.date }}</td>
-                  <td class="td-summary">{{ a.summary }}</td>
-                  <td>
+                  <td data-label="ID">{{ a.id }}</td>
+                  <td data-label="标题" class="td-title">{{ a.title }}</td>
+                  <td data-label="日期">{{ a.createdAt || a.date }}</td>
+                  <td data-label="摘要" class="td-summary">{{ a.summary }}</td>
+                  <td data-label="操作">
                     <button class="action-btn" @click="openEditModal(a)">编辑</button>
                     <button class="action-btn danger" @click="deletePost(a)">删除</button>
                   </td>
@@ -147,13 +147,13 @@
               <thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>注册时间</th><th>状态</th><th>角色</th><th>操作</th></tr></thead>
               <tbody>
                 <tr v-for="u in filteredUsers" :key="u.id">
-                  <td>{{ u.id }}</td>
-                  <td class="td-title">{{ u.username }}</td>
-                  <td>{{ u.email }}</td>
-                  <td>{{ u.createdAt }}</td>
-                  <td><span class="status-dot" :class="u.status">{{ statusMap[u.status] || u.status }}</span></td>
-                  <td>{{ u.role === 'admin' ? '管理员' : '用户' }}</td>
-                  <td>
+                  <td data-label="ID">{{ u.id }}</td>
+                  <td data-label="用户名" class="td-title">{{ u.username }}</td>
+                  <td data-label="邮箱">{{ u.email }}</td>
+                  <td data-label="注册时间">{{ u.createdAt }}</td>
+                  <td data-label="状态"><span class="status-dot" :class="u.status">{{ statusMap[u.status] || u.status }}</span></td>
+                  <td data-label="角色">{{ u.role === 'admin' ? '管理员' : '用户' }}</td>
+                  <td data-label="操作">
                     <button class="action-btn" v-if="u.status === 'active'" @click="setUserStatus(u, 'muted')">禁言</button>
                     <button class="action-btn" v-if="u.status === 'muted'" @click="setUserStatus(u, 'active')">解禁</button>
                     <button class="action-btn" v-if="u.status !== 'banned'" @click="setUserStatus(u, 'banned')">封禁</button>
@@ -537,12 +537,315 @@ function handleLogout() { logout(); router.push('/') }
 .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @media (max-width: 768px) {
-  .admin-sidebar { width: 180px; }
-  .stat-grid { grid-template-columns: repeat(2, 1fr); }
-  .admin-content { padding: 16px; }
-  .section-header { align-items: flex-start; flex-direction: column; gap: 10px; }
-  .section-actions { width: 100%; align-items: stretch; flex-direction: column; }
-  .message-search, .admin-search { width: 100%; }
-  .message-search input, .admin-search input { flex: 1; width: auto; max-width: none; }
+  .admin-layout {
+    min-height: calc(100vh - 60px);
+    flex-direction: column;
+    background: #F1F5F9;
+  }
+
+  .admin-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    width: 100%;
+    display: block;
+    background: #1E293B;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  }
+
+  .admin-brand {
+    justify-content: space-between;
+    padding: 12px 14px 8px;
+    border-bottom: none;
+    font-size: 0.98rem;
+  }
+
+  .brand-icon {
+    font-size: 1.05rem;
+  }
+
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 12px 10px;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    width: auto;
+    min-height: 36px;
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border-left: none;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    color: #CBD5E1;
+    text-align: center;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .nav-item.active {
+    background: #38f9d7;
+    color: #0f172a;
+    border-left-color: transparent;
+  }
+
+  .admin-sidebar-footer {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    padding: 0;
+    border-top: none;
+  }
+
+  .logout-btn {
+    width: auto;
+    min-height: 30px;
+    padding: 5px 10px;
+    border-color: rgba(255,255,255,0.22);
+    border-radius: 999px;
+    font-size: 0.76rem;
+  }
+
+  .admin-main {
+    width: 100%;
+    flex: none;
+  }
+
+  .admin-topbar {
+    padding: 12px 16px;
+  }
+
+  .admin-topbar h1 {
+    font-size: 1.05rem;
+  }
+
+  .admin-user {
+    max-width: 46vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-content {
+    padding: 14px 12px 24px;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .stat-card {
+    padding: 14px 10px;
+    border-radius: 8px;
+  }
+
+  .stat-num {
+    font-size: 1.35rem;
+  }
+
+  .charts-row {
+    flex-direction: column;
+  }
+
+  .section-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .section-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .message-search,
+  .admin-search {
+    width: 100%;
+  }
+
+  .message-search input,
+  .admin-search input {
+    flex: 1;
+    width: 0;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .search-clear {
+    flex: 0 0 auto;
+  }
+
+  .add-btn {
+    width: 100%;
+    min-height: 38px;
+  }
+
+  .table-wrap {
+    overflow: visible;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .admin-table,
+  .admin-table thead,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.84rem;
+  }
+
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table tr {
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .admin-table td {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    padding: 7px 0;
+    border-bottom: 1px solid #F1F5F9;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .admin-table td:last-child {
+    border-bottom: none;
+  }
+
+  .admin-table td::before {
+    content: attr(data-label);
+    color: var(--color-text-muted);
+    font-size: 0.76rem;
+    font-weight: 600;
+  }
+
+  .empty-table-cell {
+    display: block !important;
+    padding: 28px 12px !important;
+    text-align: center;
+  }
+
+  .empty-table-cell::before {
+    content: none !important;
+  }
+
+  .td-title,
+  .td-summary {
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .action-btn {
+    min-height: 30px;
+    padding: 5px 10px;
+    margin: 0 4px 6px 0;
+  }
+
+  .msg-card {
+    padding: 14px;
+    border-radius: 8px;
+  }
+
+  .msg-card-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+
+  .msg-card-name,
+  .msg-card-time {
+    min-width: 0;
+  }
+
+  .msg-card-time {
+    grid-column: 1;
+  }
+
+  .msg-card-header .action-btn {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    margin-left: 0 !important;
+    margin-right: 0;
+  }
+
+  .admin-section {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .pwd-form {
+    max-width: none;
+  }
+
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .modal-card {
+    padding: 18px;
+    max-height: calc(100vh - 24px);
+    border-radius: 10px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancel-btn,
+  .submit-btn {
+    width: 100%;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-content {
+    padding-inline: 10px;
+  }
+
+  .stat-grid {
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 12px 8px;
+  }
+
+  .admin-table {
+    font-size: 0.82rem;
+  }
 }
 </style>
