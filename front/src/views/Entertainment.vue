@@ -104,18 +104,18 @@
           </div>
         </section>
 
-        <section v-if="games.length" class="game-showcase full-row">
+        <section v-if="homeGames.length" class="game-showcase full-row">
           <div class="showcase-main">
             <span class="promo-badge">精选游戏</span>
-            <h2>{{ games[0].name }}</h2>
-            <p>{{ games[0].desc }}</p>
+            <h2>{{ homeGames[0].name }}</h2>
+            <p>{{ homeGames[0].desc }}</p>
             <div class="game-tags">
-              <span v-for="tag in games[0].tags" :key="tag">{{ tag }}</span>
+              <span v-for="tag in homeGames[0].tags" :key="tag">{{ tag }}</span>
             </div>
-            <router-link class="primary-link" :to="`/entertainment/games?game=${games[0].code}`">查看详情</router-link>
+            <router-link class="primary-link" :to="`/entertainment/games?game=${homeGames[0].code}`">查看详情</router-link>
           </div>
           <div class="showcase-list">
-            <router-link v-for="game in games.slice(1)" :key="game.id" :to="`/entertainment/games?game=${game.code}`">
+            <router-link v-for="game in homeGames.slice(1)" :key="game.id" :to="`/entertainment/games?game=${game.code}`">
               <span class="mini-cover image-cover" :style="coverStyle(game.image)">{{ game.short }}</span>
               <div>
                 <strong>{{ game.name }}</strong>
@@ -284,17 +284,17 @@
           </div>
         </template>
         <template v-else>
-          <div v-if="games.length" class="game-store">
+          <div v-if="filteredGames.length" class="game-store">
             <div class="game-hero">
               <div>
                 <span class="promo-badge">GAME HUB</span>
                 <h2>游戏大厅</h2>
                 <p>精选小游戏、排行榜和挑战任务集中展示。</p>
               </div>
-              <router-link :to="`/entertainment/games?game=${games[0].code}`">今日主推</router-link>
+              <router-link :to="`/entertainment/games?game=${filteredGames[0].code}`">今日主推</router-link>
             </div>
             <div class="game-grid">
-              <article v-for="game in games" :key="game.id" class="game-card">
+              <article v-for="game in filteredGames" :key="game.id" class="game-card">
                 <div class="game-art image-cover" :style="coverStyle(game.image)">
                   <span>{{ game.short }}</span>
                 </div>
@@ -311,8 +311,8 @@
             </div>
           </div>
           <div v-else class="empty-state">
-            <strong>游戏数据加载中</strong>
-            <span>稍等一下就能进入游戏大厅。</span>
+            <strong>{{ games.length ? '没有找到匹配游戏' : '游戏数据加载中' }}</strong>
+            <span>{{ games.length ? '换个关键词试试。' : '稍等一下就能进入游戏大厅。' }}</span>
           </div>
         </template>
       </section>
@@ -483,6 +483,27 @@ const filteredShopItems = computed(() => {
     if (activeSort.value === 'dress') return b.sales - a.sales
     return a.id - b.id
   })
+})
+
+const filteredGames = computed(() => {
+  const key = keyword.value.trim().toLowerCase()
+  if (!key) return games.value
+  return games.value.filter((game) => {
+    const text = [
+      game.name,
+      game.short,
+      game.genre,
+      game.desc,
+      game.demoTitle,
+      game.demoText,
+      ...(game.tags || [])
+    ].join(' ').toLowerCase()
+    return text.includes(key)
+  })
+})
+
+const homeGames = computed(() => {
+  return keyword.value.trim() ? filteredGames.value : games.value
 })
 
 function handleCheckIn() {
