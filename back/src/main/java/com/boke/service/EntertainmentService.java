@@ -146,6 +146,7 @@ public class EntertainmentService {
             eventRecordMapper.insert(record);
             walletMapper.addCoins(userId, event.getReward());
             userMapper.addBalance(userId, event.getReward());
+            evictCache(EVENTS_CACHE_KEY);
         }
         return getWallet(userId);
     }
@@ -182,10 +183,7 @@ public class EntertainmentService {
         userMapper.deductBalance(userId, item.getPrice());
         int stockDeducted = itemMapper.deductStock(itemId);
         if (stockDeducted == 0) throw new BusinessException(400, "商品库存不足");
-        try {
-            redisTemplate.delete(ITEMS_CACHE_KEY);
-        } catch (RuntimeException ignored) {
-        }
+        evictCache(ITEMS_CACHE_KEY);
         return getWallet(userId);
     }
 
@@ -312,7 +310,7 @@ public class EntertainmentService {
                 stringRedisTemplate.opsForZSet().removeRange(key, 0, -11);
                 stringRedisTemplate.expire(key, PUBLIC_CACHE_TTL);
             }
-            redisTemplate.delete(GAMES_CACHE_KEY);
+            evictCache(GAMES_CACHE_KEY);
         } catch (RuntimeException ignored) {
         }
     }
@@ -326,6 +324,13 @@ public class EntertainmentService {
             }
         } catch (BusinessException e) {
             throw e;
+        } catch (RuntimeException ignored) {
+        }
+    }
+
+    private void evictCache(String key) {
+        try {
+            redisTemplate.delete(key);
         } catch (RuntimeException ignored) {
         }
     }
