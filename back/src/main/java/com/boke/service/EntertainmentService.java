@@ -125,6 +125,11 @@ public class EntertainmentService {
 
     @Transactional
     public EntertainmentWalletVO finishEvent(Long userId, Long eventId) {
+        String lockKey = "ent:event:lock:" + userId + ":" + eventId;
+        return withUserLock(lockKey, () -> doFinishEvent(userId, eventId), () -> getWallet(userId));
+    }
+
+    private EntertainmentWalletVO doFinishEvent(Long userId, Long eventId) {
         EntertainmentEvent event = eventMapper.selectById(eventId);
         if (event == null || !"active".equals(event.getStatus())) throw new BusinessException(404, "活动不存在");
         ensureWallet(userId);
