@@ -165,6 +165,11 @@ public class EntertainmentService {
 
     @Transactional
     public EntertainmentWalletVO buyItem(Long userId, Long itemId) {
+        String lockKey = "ent:buy:lock:" + itemId;
+        return withUserLock(lockKey, () -> doBuyItem(userId, itemId), () -> getWallet(userId));
+    }
+
+    private EntertainmentWalletVO doBuyItem(Long userId, Long itemId) {
         EntertainmentItem item = itemMapper.selectById(itemId);
         if (item == null || !"active".equals(item.getStatus())) throw new BusinessException(404, "商品不存在");
         if (item.getStock() <= 0) throw new BusinessException(400, "商品库存不足");
@@ -173,7 +178,8 @@ public class EntertainmentService {
         int deducted = walletMapper.deductCoins(userId, item.getPrice());
         if (deducted == 0) throw new BusinessException(400, "娱乐币余额不足");
         userMapper.deductBalance(userId, item.getPrice());
-        itemMapper.deductStock(itemId);
+        int stockDeducted = itemMapper.deductStock(itemId);
+        if (stockDeducted == 0) throw new BusinessException(400, "商品库存不足");
         try {
             redisTemplate.delete(ITEMS_CACHE_KEY);
         } catch (RuntimeException ignored) {
