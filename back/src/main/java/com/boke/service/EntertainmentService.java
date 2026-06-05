@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.data.redis.RedisSystemException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -238,21 +240,25 @@ public class EntertainmentService {
 
     private <T> T withUserLock(String key, Supplier<T> action, Supplier<T> fallback) {
         String token = UUID.randomUUID().toString();
+        Boolean locked;
         try {
-            Boolean locked = stringRedisTemplate.opsForValue().setIfAbsent(key, token, USER_LOCK_TTL);
-            if (!Boolean.TRUE.equals(locked)) {
-                sleepQuietly(120);
-                return fallback.get();
-            }
+            locked = stringRedisTemplate.opsForValue().setIfAbsent(key, token, USER_LOCK_TTL);
+        } catch (RedisConnectionFailureException | RedisSystemException e) {
+            return action.get();
+        }
+        if (!Boolean.TRUE.equals(locked)) {
+            sleepQuietly(120);
+            return fallback.get();
+        }
+        try {
+            return action.get();
+        } finally {
             try {
-                return action.get();
-            } finally {
                 if (Objects.equals(token, stringRedisTemplate.opsForValue().get(key))) {
                     stringRedisTemplate.delete(key);
                 }
+            } catch (RedisConnectionFailureException | RedisSystemException ignored) {
             }
-        } catch (RuntimeException ignored) {
-            return action.get();
         }
     }
 
