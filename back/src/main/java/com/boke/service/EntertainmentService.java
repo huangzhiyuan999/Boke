@@ -7,6 +7,7 @@ import com.boke.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class EntertainmentService {
     private static final String GAMES_CACHE_KEY = "ent:games";
     private static final String EVENTS_CACHE_KEY = "ent:events";
     private static final Duration PUBLIC_CACHE_TTL = Duration.ofSeconds(60);
+    private static final Duration USER_LOCK_TTL = Duration.ofSeconds(8);
 
     private final EntertainmentItemMapper itemMapper;
     private final EntertainmentGameMapper gameMapper;
@@ -37,6 +39,7 @@ public class EntertainmentService {
     private final EntertainmentGamePlayMapper gamePlayMapper;
     private final UserMapper userMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Qualifier("entertainmentExecutor")
     private final Executor executor;
@@ -104,6 +107,11 @@ public class EntertainmentService {
 
     @Transactional
     public EntertainmentWalletVO checkIn(Long userId) {
+        String lockKey = "ent:checkin:lock:" + userId + ":" + LocalDate.now();
+        return withUserLock(lockKey, () -> doCheckIn(userId), () -> getWallet(userId));
+    }
+
+    private EntertainmentWalletVO doCheckIn(Long userId) {
         EntertainmentWallet wallet = ensureWallet(userId);
         LocalDate today = LocalDate.now();
         if (!today.equals(wallet.getCheckedInDate())) {
@@ -211,6 +219,34 @@ public class EntertainmentService {
             return data;
         } catch (RuntimeException ignored) {
             return loader.get();
+        }
+    }
+
+    private <T> T withUserLock(String key, Supplier<T> action, Supplier<T> fallback) {
+        String token = UUID.randomUUID().toString();
+        try {
+            Boolean locked = stringRedisTemplate.opsForValue().setIfAbsent(key, token, USER_LOCK_TTL);
+            if (!Boolean.TRUE.equals(locked)) {
+                sleepQuietly(120);
+                return fallback.get();
+            }
+            try {
+                return action.get();
+            } finally {
+                if (Objects.equals(token, stringRedisTemplate.opsForValue().get(key))) {
+                    stringRedisTemplate.delete(key);
+                }
+            }
+        } catch (RuntimeException ignored) {
+            return action.get();
+        }
+    }
+
+    private void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }
