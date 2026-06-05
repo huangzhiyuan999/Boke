@@ -7,6 +7,7 @@ import com.boke.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class EntertainmentService {
     private static final String ITEMS_CACHE_KEY = "ent:items";
     private static final String GAMES_CACHE_KEY = "ent:games";
     private static final String EVENTS_CACHE_KEY = "ent:events";
+    private static final String RANK_CACHE_PREFIX = "ent:rank:";
     private static final Duration PUBLIC_CACHE_TTL = Duration.ofSeconds(60);
     private static final Duration USER_LOCK_TTL = Duration.ofSeconds(8);
 
@@ -155,6 +157,7 @@ public class EntertainmentService {
         play.setGameId(game.getId());
         play.setScore(score != null ? score : 0);
         gamePlayMapper.insert(play);
+        cacheGameScore(game.getId(), userId, play.getScore());
         return getWallet(userId);
     }
 
@@ -198,9 +201,7 @@ public class EntertainmentService {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
-        List<EntertainmentRankVO> ranks = rankMapper.findTopByGameId(game.getId()).stream()
-                .map(rank -> new EntertainmentRankVO(rank.getPlayerName(), rank.getScore()))
-                .collect(Collectors.toList());
+        List<EntertainmentRankVO> ranks = getGameRanks(game.getId());
         return new EntertainmentGameVO(game.getId(), game.getCode(), game.getName(), game.getShortName(),
                 game.getGenre(), game.getDescription(), tags, game.getRating(), game.getPlayers(),
                 game.getImageUrl(), game.getDetailBackground(), game.getDemoTitle(), game.getDemoText(), ranks);
@@ -252,6 +253,53 @@ public class EntertainmentService {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private List<EntertainmentRankVO> getGameRanks(Long gameId) {
+        String key = RANK_CACHE_PREFIX + gameId;
+        try {
+            Set<ZSetOperations.TypedTuple<String>> tuples =
+                    stringRedisTemplate.opsForZSet().reverseRangeWithScores(key, 0, 9);
+            if (tuples != null && !tuples.isEmpty()) {
+                return tuples.stream()
+                        .map(tuple -> new EntertainmentRankVO(tuple.getValue(), tuple.getScore().intValue()))
+                        .collect(Collectors.toList());
+            }
+            List<EntertainmentRankVO> ranks = loadRanksFromDatabase(gameId);
+            cacheGameRanks(key, ranks);
+            return ranks;
+        } catch (RuntimeException ignored) {
+            return loadRanksFromDatabase(gameId);
+        }
+    }
+
+    private List<EntertainmentRankVO> loadRanksFromDatabase(Long gameId) {
+        return rankMapper.findTopByGameId(gameId).stream()
+                .map(rank -> new EntertainmentRankVO(rank.getPlayerName(), rank.getScore()))
+                .collect(Collectors.toList());
+    }
+
+    private void cacheGameRanks(String key, List<EntertainmentRankVO> ranks) {
+        for (EntertainmentRankVO rank : ranks) {
+            stringRedisTemplate.opsForZSet().add(key, rank.getName(), rank.getScore());
+        }
+        stringRedisTemplate.expire(key, PUBLIC_CACHE_TTL);
+    }
+
+    private void cacheGameScore(Long gameId, Long userId, Integer score) {
+        try {
+            User user = userMapper.selectById(userId);
+            String playerName = user != null && user.getUsername() != null ? user.getUsername() : "玩家" + userId;
+            String key = RANK_CACHE_PREFIX + gameId;
+            Double oldScore = stringRedisTemplate.opsForZSet().score(key, playerName);
+            if (oldScore == null || score > oldScore) {
+                stringRedisTemplate.opsForZSet().add(key, playerName, score);
+                stringRedisTemplate.opsForZSet().removeRange(key, 0, -11);
+                stringRedisTemplate.expire(key, PUBLIC_CACHE_TTL);
+            }
+            redisTemplate.delete(GAMES_CACHE_KEY);
+        } catch (RuntimeException ignored) {
         }
     }
 }
