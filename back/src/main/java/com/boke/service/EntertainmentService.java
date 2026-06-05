@@ -6,19 +6,27 @@ import com.boke.entity.*;
 import com.boke.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class EntertainmentService {
+
+    private static final String ITEMS_CACHE_KEY = "ent:items";
+    private static final String GAMES_CACHE_KEY = "ent:games";
+    private static final String EVENTS_CACHE_KEY = "ent:events";
+    private static final Duration PUBLIC_CACHE_TTL = Duration.ofSeconds(60);
 
     private final EntertainmentItemMapper itemMapper;
     private final EntertainmentGameMapper gameMapper;
@@ -28,6 +36,7 @@ public class EntertainmentService {
     private final EntertainmentEventRecordMapper eventRecordMapper;
     private final EntertainmentGamePlayMapper gamePlayMapper;
     private final UserMapper userMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Qualifier("entertainmentExecutor")
     private final Executor executor;
@@ -47,10 +56,15 @@ public class EntertainmentService {
     }
 
     public List<EntertainmentItemVO> getItems() {
-        return itemMapper.findActiveItems().stream().map(this::toItemVO).collect(Collectors.toList());
+        return getCachedList(ITEMS_CACHE_KEY, () ->
+                itemMapper.findActiveItems().stream().map(this::toItemVO).collect(Collectors.toList()));
     }
 
     public List<EntertainmentGameVO> getGames() {
+        return getCachedList(GAMES_CACHE_KEY, this::loadGames);
+    }
+
+    private List<EntertainmentGameVO> loadGames() {
         List<EntertainmentGame> games = gameMapper.findActiveGames();
         List<CompletableFuture<EntertainmentGameVO>> futures = games.stream()
                 .map(game -> CompletableFuture.supplyAsync(() -> toGameVO(game), executor))
@@ -59,6 +73,11 @@ public class EntertainmentService {
     }
 
     public EntertainmentGameVO getGame(String code) {
+        EntertainmentGameVO cachedGame = getGames().stream()
+                .filter(game -> Objects.equals(game.getCode(), code))
+                .findFirst()
+                .orElse(null);
+        if (cachedGame != null) return cachedGame;
         EntertainmentGame game = gameMapper.findActiveByCode(code);
         if (game == null) throw new BusinessException(404, "游戏不存在");
         return toGameVO(game);
@@ -68,8 +87,12 @@ public class EntertainmentService {
         Set<Long> completedIds = userId == null
                 ? Collections.emptySet()
                 : new HashSet<>(eventRecordMapper.findCompletedEventIds(userId));
-        return eventMapper.findActiveEvents().stream()
-                .map(event -> toEventVO(event, completedIds.contains(event.getId())))
+        return getCachedList(EVENTS_CACHE_KEY, () -> eventMapper.findActiveEvents().stream()
+                        .map(event -> toEventVO(event, false))
+                        .collect(Collectors.toList()))
+                .stream()
+                .map(event -> new EntertainmentEventVO(event.getId(), event.getIcon(), event.getTitle(), event.getDesc(),
+                        event.getReward(), Boolean.TRUE.equals(event.getDone()) || completedIds.contains(event.getId())))
                 .collect(Collectors.toList());
     }
 
@@ -133,6 +156,10 @@ public class EntertainmentService {
         if (deducted == 0) throw new BusinessException(400, "娱乐币余额不足");
         userMapper.deductBalance(userId, item.getPrice());
         itemMapper.deductStock(itemId);
+        try {
+            redisTemplate.delete(ITEMS_CACHE_KEY);
+        } catch (RuntimeException ignored) {
+        }
         return getWallet(userId);
     }
 
@@ -170,5 +197,20 @@ public class EntertainmentService {
         boolean done = completed || Objects.equals(event.getDefaultDone(), 1);
         return new EntertainmentEventVO(event.getId(), event.getIcon(), event.getTitle(), event.getDescription(),
                 event.getReward(), done);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> List<T> getCachedList(String key, Supplier<List<T>> loader) {
+        try {
+            Object cached = redisTemplate.opsForValue().get(key);
+            if (cached instanceof List<?>) {
+                return (List<T>) cached;
+            }
+            List<T> data = loader.get();
+            redisTemplate.opsForValue().set(key, data, PUBLIC_CACHE_TTL);
+            return data;
+        } catch (RuntimeException ignored) {
+            return loader.get();
+        }
     }
 }
