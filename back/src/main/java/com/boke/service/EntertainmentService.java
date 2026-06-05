@@ -31,7 +31,9 @@ public class EntertainmentService {
     private static final String GAMES_CACHE_KEY = "ent:games";
     private static final String EVENTS_CACHE_KEY = "ent:events";
     private static final String RANK_CACHE_PREFIX = "ent:rank:";
+    private static final String WALLET_CACHE_PREFIX = "ent:wallet:";
     private static final Duration PUBLIC_CACHE_TTL = Duration.ofSeconds(60);
+    private static final Duration WALLET_CACHE_TTL = Duration.ofSeconds(10);
     private static final Duration USER_LOCK_TTL = Duration.ofSeconds(8);
     private static final Duration GAME_SUBMIT_TTL = Duration.ofSeconds(2);
 
@@ -105,9 +107,22 @@ public class EntertainmentService {
     }
 
     public EntertainmentWalletVO getWallet(Long userId) {
+        String cacheKey = WALLET_CACHE_PREFIX + userId;
+        try {
+            Object cached = redisTemplate.opsForValue().get(cacheKey);
+            if (cached instanceof EntertainmentWalletVO walletVO) {
+                return walletVO;
+            }
+        } catch (RuntimeException ignored) {
+        }
         EntertainmentWallet wallet = ensureWallet(userId);
         boolean checkedIn = LocalDate.now().equals(wallet.getCheckedInDate());
-        return new EntertainmentWalletVO(wallet.getCoins(), checkedIn);
+        EntertainmentWalletVO walletVO = new EntertainmentWalletVO(wallet.getCoins(), checkedIn);
+        try {
+            redisTemplate.opsForValue().set(cacheKey, walletVO, WALLET_CACHE_TTL);
+        } catch (RuntimeException ignored) {
+        }
+        return walletVO;
     }
 
     @Transactional
@@ -124,6 +139,7 @@ public class EntertainmentService {
             wallet.setCheckedInDate(today);
             walletMapper.updateById(wallet);
             userMapper.addBalance(userId, 80);
+            evictWalletCache(userId);
         }
         return getWallet(userId);
     }
@@ -147,6 +163,7 @@ public class EntertainmentService {
             walletMapper.addCoins(userId, event.getReward());
             userMapper.addBalance(userId, event.getReward());
             evictCache(EVENTS_CACHE_KEY);
+            evictWalletCache(userId);
         }
         return getWallet(userId);
     }
@@ -184,6 +201,7 @@ public class EntertainmentService {
         int stockDeducted = itemMapper.deductStock(itemId);
         if (stockDeducted == 0) throw new BusinessException(400, "商品库存不足");
         evictCache(ITEMS_CACHE_KEY);
+        evictWalletCache(userId);
         return getWallet(userId);
     }
 
@@ -333,5 +351,9 @@ public class EntertainmentService {
             redisTemplate.delete(key);
         } catch (RuntimeException ignored) {
         }
+    }
+
+    private void evictWalletCache(Long userId) {
+        evictCache(WALLET_CACHE_PREFIX + userId);
     }
 }
