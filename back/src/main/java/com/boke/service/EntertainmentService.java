@@ -31,6 +31,7 @@ public class EntertainmentService {
     private static final String RANK_CACHE_PREFIX = "ent:rank:";
     private static final Duration PUBLIC_CACHE_TTL = Duration.ofSeconds(60);
     private static final Duration USER_LOCK_TTL = Duration.ofSeconds(8);
+    private static final Duration GAME_SUBMIT_TTL = Duration.ofSeconds(2);
 
     private final EntertainmentItemMapper itemMapper;
     private final EntertainmentGameMapper gameMapper;
@@ -149,6 +150,7 @@ public class EntertainmentService {
 
     @Transactional
     public EntertainmentWalletVO playGame(Long userId, String code, Integer score) {
+        guardGameSubmit(userId, code);
         EntertainmentGame game = gameMapper.findActiveByCode(code);
         if (game == null) throw new BusinessException(404, "游戏不存在");
         ensureWallet(userId);
@@ -299,6 +301,19 @@ public class EntertainmentService {
                 stringRedisTemplate.expire(key, PUBLIC_CACHE_TTL);
             }
             redisTemplate.delete(GAMES_CACHE_KEY);
+        } catch (RuntimeException ignored) {
+        }
+    }
+
+    private void guardGameSubmit(Long userId, String code) {
+        String key = "ent:game:submit:" + userId + ":" + code;
+        try {
+            Boolean allowed = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", GAME_SUBMIT_TTL);
+            if (!Boolean.TRUE.equals(allowed)) {
+                throw new BusinessException(429, "提交太频繁，请稍后再试");
+            }
+        } catch (BusinessException e) {
+            throw e;
         } catch (RuntimeException ignored) {
         }
     }
